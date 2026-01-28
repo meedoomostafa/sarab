@@ -2,46 +2,48 @@ using System.CommandLine;
 using System.Threading.Tasks;
 using Spectre.Console;
 using Sarab.Core.Interfaces;
+using System; // Added for Exception
 
 namespace Sarab.Cli.Commands;
 
 public class InitCommand : Command
 {
     private readonly ITokenRepository _repository;
-    private readonly IProcessManager _processManager;
+    private readonly IArtifactStore _artifactStore;
 
-    public InitCommand(ITokenRepository repository, IProcessManager processManager)
-        : base("init", "Initialize Sarab environment")
+    public InitCommand(ITokenRepository repository, IArtifactStore artifactStore)
+        : base("init", "Initialize Sarab environment and database")
     {
         _repository = repository;
-        _processManager = processManager;
-
+        _artifactStore = artifactStore;
         this.SetHandler(ExecuteAsync);
     }
 
     private async Task ExecuteAsync()
     {
-        await AnsiConsole.Status()
-            .StartAsync("Initializing Sarab...", async ctx =>
-            {
-                // Initialize database
-                await _repository.InitializeAsync();
+        try
+        {
+            AnsiConsole.MarkupLine("[bold blue]Initializing Sarab...[/]");
 
-                // Verify binary
-                ctx.Status("Checking cloudflared binary...");
-                try
+            await AnsiConsole.Status()
+                .StartAsync("Setting up environment...", async ctx =>
                 {
-                    await _processManager.EnsureBinaryExistsAsync();
-                    AnsiConsole.MarkupLine("[green]✓ cloudflared binary found.[/]");
-                }
-                catch
-                {
-                    AnsiConsole.MarkupLine("[yellow]! cloudflared binary not found.[/]");
-                    AnsiConsole.MarkupLine("Please install it manually or ensure it is in your PATH.");
-                    // TODO: Implement auto-download
-                }
-            });
+                    // 1. Setup Database
+                    ctx.Status("Initializing Database...");
+                    await _repository.InitializeAsync();
+                    AnsiConsole.MarkupLine("[green]✔ Database initialized.[/]");
 
-        AnsiConsole.MarkupLine("[green]Initialization complete![/]");
+                    // 2. Download Binary
+                    ctx.Status("Checking cloudflared binary...");
+                    var path = await _artifactStore.EnsureCloudflaredBinaryAsync();
+                    AnsiConsole.MarkupLine($"[green]✔ cloudflared binary ready at: {path}[/]");
+                });
+
+            AnsiConsole.MarkupLine("[bold green]Initialization Complete![/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+        }
     }
 }

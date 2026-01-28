@@ -26,7 +26,7 @@ class Program
         // Add Commands
         rootCommand.AddCommand(new InitCommand(
             serviceProvider.GetRequiredService<ITokenRepository>(),
-            serviceProvider.GetRequiredService<IProcessManager>()
+            serviceProvider.GetRequiredService<IArtifactStore>()
         ));
 
         rootCommand.AddCommand(new TokenCommand(
@@ -60,6 +60,7 @@ class Program
                 .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://api.cloudflare.com/client/v4"));
 
         services.AddSingleton<ICloudflareAdapter, CloudflareAdapter>();
+        services.AddHttpClient<IArtifactStore, ArtifactStore>();
 
         return services;
     }
