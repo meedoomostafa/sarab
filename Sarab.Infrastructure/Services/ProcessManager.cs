@@ -8,34 +8,58 @@ namespace Sarab.Infrastructure.Services;
 
 public class ProcessManager : IProcessManager
 {
-    private const string BinaryName = "cloudflared"; // Assuming it's in PATH or current dir
+    private readonly IArtifactStore _artifactStore;
+    private string? _binaryPath;
+
+    public ProcessManager(IArtifactStore artifactStore)
+    {
+        _artifactStore = artifactStore;
+    }
+
+    private async Task<string> GetBinaryPathAsync()
+    {
+        if (string.IsNullOrEmpty(_binaryPath))
+        {
+            _binaryPath = await _artifactStore.EnsureCloudflaredBinaryAsync();
+        }
+        return _binaryPath;
+    }
 
     public async Task EnsureBinaryExistsAsync()
     {
-        // Verify binary existence
+        var path = await GetBinaryPathAsync();
+
+        // Verify binary execution
         try
         {
-            await Cli.Wrap(BinaryName)
+            await Cli.Wrap(path)
                      .WithArguments("--version")
                      .ExecuteAsync();
         }
-        catch
+        catch (Exception ex)
         {
-            throw new FileNotFoundException("cloudflared binary not found in PATH. Please install it or run 'sarab init'.");
+            throw new FileNotFoundException($"cloudflared binary at '{path}' is invalid or not executable. Error: {ex.Message}");
         }
     }
 
     public async Task StartTunnelAsync(string tunnelToken, string url)
     {
+        var path = await GetBinaryPathAsync();
+
         // Execute tunnel via named token
-        var cmd = Cli.Wrap(BinaryName)
+        var cmd = Cli.Wrap(path)
                      .WithArguments(args => args
                          .Add("tunnel")
                          .Add("run")
                          .Add("--token")
                          .Add(tunnelToken)
-                         .Add("--url") // Map traffic to this local URL
-                         .Add(url)
+                     // .Add("--url") // Named tunnels managed remotely don't use --url in 'run' command usually?
+                     // Wait, if we use 'tunnel run', it connects to the cloud. 
+                     // The INGRESS rules (which we configured via API) tell the cloud where to route traffic.
+                     // But the LOCAL cloudflared process needs to know to proxy.
+                     // For named tunnels, 'cloudflared tunnel run' reads ingress from remote config (if managed).
+                     // So we DO NOT need --url here if config is remote.
+                     // Remove --url argument.
                      )
                      // Redirect output
                      .WithStandardOutputPipe(PipeTarget.ToDelegate(Console.WriteLine))

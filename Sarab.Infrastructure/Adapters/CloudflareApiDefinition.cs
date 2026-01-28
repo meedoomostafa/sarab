@@ -17,6 +17,9 @@ public interface ICloudflareApi
     [Get("/accounts/{accountId}/tunnels/{tunnelId}/token")]
     Task<TunnelTokenResponse> GetTunnelTokenAsync([Authorize("Bearer")] string token, string accountId, string tunnelId);
 
+    [Put("/accounts/{accountId}/tunnels/{tunnelId}/configurations")]
+    Task<TunnelConfigResponse> UpdateTunnelConfigAsync([Authorize("Bearer")] string token, string accountId, string tunnelId, [Body] UpdateTunnelConfigRequest request);
+
     [Get("/accounts/{accountId}/tunnels")]
     Task<TunnelListResponse> GetTunnelsAsync([Authorize("Bearer")] string token, string accountId, [AliasAs("name")] string? name = null, [AliasAs("is_deleted")] bool isDeleted = false);
 

@@ -71,7 +71,33 @@ public class CloudflareAdapter : ICloudflareAdapter
         return response.Result;
     }
 
+    public async Task ConfigureTunnelAsync(Token token, string tunnelId, string hostname, string localUrl)
+    {
+        if (string.IsNullOrEmpty(token.AccountId))
+            throw new Exception("Account ID missing for token.");
 
+        var config = new TunnelConfig
+        {
+            Ingress = new List<TunnelIngressRule>
+            {
+                new TunnelIngressRule
+                {
+                    Hostname = hostname,
+                    Service = localUrl
+                },
+                new TunnelIngressRule
+                {
+                    Service = "http_status:404"
+                }
+            }
+        };
+
+        var request = new UpdateTunnelConfigRequest { Config = config };
+        var response = await _api.UpdateTunnelConfigAsync(token.ApiToken, token.AccountId, tunnelId, request);
+
+        if (!response.Success)
+            throw new Exception("Failed to configure tunnel ingress rules.");
+    }
 
     public async Task<List<TunnelDetail>> ListTunnelsAsync(Token token)
     {

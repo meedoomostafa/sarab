@@ -70,10 +70,14 @@ public class IllusionistService
         Console.WriteLine($"Pointing {hostname} -> {tunnelName}...");
         var dnsRecordId = await _adapter.CreateDnsRecordAsync(token, zoneId, hostname, $"{tunnelId}.cfargotunnel.com");
 
+        var localUrl = $"http://localhost:{port}";
+        // Configure Ingress
+        Console.WriteLine($"Configuring ingress -> {localUrl}...");
+        await _adapter.ConfigureTunnelAsync(token, tunnelId, hostname, localUrl);
+
         try
         {
             // Start tunnel
-            var localUrl = $"http://localhost:{port}";
             Console.WriteLine($"Mirage active at: https://{hostname}");
             Console.WriteLine("Press Ctrl+C to vanish.");
 
