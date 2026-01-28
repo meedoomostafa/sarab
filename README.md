@@ -136,4 +136,4 @@ sarab nuke
 *   **Warning:** This will delete *all* resources named with the `sarab-` prefix.
 
 ## License
-MIT
+[MIT](LICENSE)
