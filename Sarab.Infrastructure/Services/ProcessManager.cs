@@ -12,7 +12,7 @@ public class ProcessManager : IProcessManager
 
     public async Task EnsureBinaryExistsAsync()
     {
-        // Simple check: see if we can run `cloudflared --version`
+        // Verify binary existence
         try
         {
             await Cli.Wrap(BinaryName)
@@ -27,11 +27,7 @@ public class ProcessManager : IProcessManager
 
     public async Task StartTunnelAsync(string tunnelToken, string url)
     {
-        // "tunnel run" usually requires a named tunnel or a quick tunnel.
-        // For quick tunnel (trycloudflare): `cloudflared tunnel --url http://localhost:8000`
-        // For named tunnel: `cloudflared tunnel run --token <TOKEN>`
-
-        // Assuming we are using Named Tunnels via Token
+        // Execute tunnel via named token
         var cmd = Cli.Wrap(BinaryName)
                      .WithArguments(args => args
                          .Add("tunnel")
@@ -41,13 +37,11 @@ public class ProcessManager : IProcessManager
                          .Add("--url") // Map traffic to this local URL
                          .Add(url)
                      )
-                     // Connect stdout/stderr to console for now, or capture it
+                     // Redirect output
                      .WithStandardOutputPipe(PipeTarget.ToDelegate(Console.WriteLine))
                      .WithStandardErrorPipe(PipeTarget.ToDelegate(Console.Error.WriteLine));
 
-        // This is a long-running process. We shouldn't await it directly if we want the CLI to stay responsive
-        // unless we want to block until user hits Ctrl+C.
-        // For the CLI "expose" command, blocking is fine.
+        // Execute tunnel process
         await cmd.ExecuteAsync();
     }
 

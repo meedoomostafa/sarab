@@ -13,4 +13,5 @@ public interface ITokenRepository
     Task UpdateAsync(Token token);
     Task<Config?> GetConfigAsync(string key);
     Task SetConfigAsync(string key, string value);
+    Task InitializeAsync();
 }

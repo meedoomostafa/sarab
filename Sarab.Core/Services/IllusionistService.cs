@@ -19,19 +19,19 @@ public class IllusionistService
 
     public async Task ExposePortAsync(int port, string? subdomain = null)
     {
-        // 1. Get Token
+        // Retrieve token
         var token = await _rotator.GetNextTokenAsync();
         if (token == null)
         {
             throw new Exception("No active tokens found. Please add a token using 'sarab token add'.");
         }
 
-        // 2. Prepare Tunnel
+        // Prepare environment
         await _processManager.EnsureBinaryExistsAsync();
 
-        // 3. TODO: Create Tunnel & DNS
+        // TODO: Create tunnel and DNS records
 
-        // 4. Run Tunnel
+        // Start tunnel
         var localUrl = $"http://localhost:{port}";
         await _processManager.StartTunnelAsync(token.ApiToken, localUrl);
     }

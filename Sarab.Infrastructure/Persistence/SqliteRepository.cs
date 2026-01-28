@@ -70,7 +70,7 @@ public class SqliteRepository : ITokenRepository
     public async Task<Token?> GetBestTokenAsync()
     {
         using var conn = GetConnection();
-        // Simple logic: Get first active token. Ideally, sort by FailureCount ASC, LastUsedAt ASC
+        // Retrieve best available token
         return await conn.QueryFirstOrDefaultAsync<Token>("SELECT * FROM Tokens WHERE IsActive = 1 ORDER BY FailureCount ASC LIMIT 1");
     }
 

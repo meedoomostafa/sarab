@@ -25,6 +25,8 @@ public class CloudflareAdapter : ICloudflareAdapter
             {
                 throw new Exception("Token is invalid or not active.");
             }
+
+            // TODO: Fetch real Account ID
             return "unknown-account-id";
         }
         catch (ApiException ex)
