@@ -1,10 +1,12 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Sarab.Core.Entities;
 using Sarab.Core.Interfaces;
 using Refit;
 using Sarab.Infrastructure.DTOs;
+using Sarab.Core.DTOs;
 
 namespace Sarab.Infrastructure.Adapters;
 
@@ -67,6 +69,38 @@ public class CloudflareAdapter : ICloudflareAdapter
             throw new Exception("Failed to retrieve tunnel token.");
 
         return response.Result;
+    }
+
+
+
+    public async Task<List<TunnelDetail>> ListTunnelsAsync(Token token)
+    {
+        if (string.IsNullOrEmpty(token.AccountId))
+            throw new Exception("Account ID missing for token.");
+
+        // List active tunnels (is_deleted = false)
+        var response = await _api.GetTunnelsAsync(token.ApiToken, token.AccountId, isDeleted: false);
+
+        if (!response.Success)
+            throw new Exception("Failed to list tunnels.");
+
+        return response.Result
+            .Where(t => t.DeletedAt == null)
+            .Select(t => new TunnelDetail
+            {
+                Id = t.Id,
+                Name = t.Name,
+                DeletedAt = t.DeletedAt
+            })
+            .ToList();
+    }
+
+    public async Task DeleteTunnelAsync(Token token, string tunnelId)
+    {
+        if (string.IsNullOrEmpty(token.AccountId))
+            throw new Exception("Account ID missing for token.");
+
+        await _api.DeleteTunnelAsync(token.ApiToken, token.AccountId, tunnelId);
     }
 
     public async Task<string> CreateDnsRecordAsync(Token token, string zoneId, string name, string content, bool proxied = true)

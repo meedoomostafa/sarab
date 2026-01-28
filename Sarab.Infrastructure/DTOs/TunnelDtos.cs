@@ -34,3 +34,24 @@ public class TunnelTokenResponse
     [JsonPropertyName("success")]
     public bool Success { get; set; }
 }
+
+public class TunnelListResponse
+{
+    [JsonPropertyName("result")]
+    public CloudflareTunnelDetail[] Result { get; set; } = Array.Empty<CloudflareTunnelDetail>();
+
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
+}
+
+public class CloudflareTunnelDetail
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("deleted_at")]
+    public DateTime? DeletedAt { get; set; }
+}

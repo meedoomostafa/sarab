@@ -1,5 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using Sarab.Core.DTOs;
 using Sarab.Core.Interfaces;
 
 namespace Sarab.Core.Services;
@@ -88,6 +91,77 @@ public class IllusionistService
             catch (Exception ex)
             {
                 Console.WriteLine($"Cleanup failed: {ex.Message}");
+            }
+        }
+    }
+
+    public async Task<Dictionary<string, List<TunnelDetail>>> ListMiragesAsync()
+    {
+        var result = new Dictionary<string, List<TunnelDetail>>();
+        var tokens = await _rotator.GetAllTokensAsync();
+
+        foreach (var token in tokens)
+        {
+            try
+            {
+                // Ensure Account ID is present for listing
+                if (string.IsNullOrEmpty(token.AccountId))
+                {
+                    token.AccountId = await _adapter.VerifyTokenAsync(token.ApiToken);
+                    await _rotator.ReportFailureAsync(token);
+                }
+
+                var tunnels = await _adapter.ListTunnelsAsync(token);
+                // Filter for "sarab-" prefix
+                var sarabTunnels = tunnels.Where(t => t.Name.StartsWith("sarab-")).ToList();
+
+                if (sarabTunnels.Any())
+                {
+                    result.Add(token.Alias, sarabTunnels);
+                }
+            }
+            catch
+            {
+                // Ignore tokens that fail to list (perm issues or invalid)
+            }
+        }
+
+        return result;
+    }
+
+    public async Task NukeAsync()
+    {
+        var tokens = await _rotator.GetAllTokensAsync();
+        foreach (var token in tokens)
+        {
+            Console.WriteLine($"Scanning identity '{token.Alias}'...");
+            try
+            {
+                if (string.IsNullOrEmpty(token.AccountId))
+                {
+                    token.AccountId = await _adapter.VerifyTokenAsync(token.ApiToken);
+                    await _rotator.ReportFailureAsync(token);
+                }
+
+                var tunnels = await _adapter.ListTunnelsAsync(token);
+                var sarabTunnels = tunnels.Where(t => t.Name.StartsWith("sarab-")).ToList();
+
+                if (sarabTunnels.Count == 0)
+                {
+                    Console.WriteLine("  No active illusions found.");
+                    continue;
+                }
+
+                foreach (var tunnel in sarabTunnels)
+                {
+                    Console.WriteLine($"  - Nuking {tunnel.Name} ({tunnel.Id})...");
+                    await _adapter.DeleteTunnelAsync(token, tunnel.Id);
+                    Console.WriteLine("    [Deleted]");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  [Error] {ex.Message}");
             }
         }
     }

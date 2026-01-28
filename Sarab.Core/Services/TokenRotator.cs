@@ -26,4 +26,9 @@ public class TokenRotator
         token.FailureCount++;
         await _repository.UpdateAsync(token);
     }
+
+    public async Task<IEnumerable<Token>> GetAllTokensAsync()
+    {
+        return await _repository.ListAsync();
+    }
 }

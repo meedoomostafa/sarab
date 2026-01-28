@@ -12,8 +12,16 @@ public interface ICloudflareApi
     [Post("/accounts/{accountId}/tunnels")]
     Task<CreateTunnelResponse> CreateTunnelAsync([Authorize("Bearer")] string token, string accountId, [Body] CreateTunnelRequest request);
 
+
+
     [Get("/accounts/{accountId}/tunnels/{tunnelId}/token")]
     Task<TunnelTokenResponse> GetTunnelTokenAsync([Authorize("Bearer")] string token, string accountId, string tunnelId);
+
+    [Get("/accounts/{accountId}/tunnels")]
+    Task<TunnelListResponse> GetTunnelsAsync([Authorize("Bearer")] string token, string accountId, [AliasAs("name")] string? name = null, [AliasAs("is_deleted")] bool isDeleted = false);
+
+    [Delete("/accounts/{accountId}/tunnels/{tunnelId}")]
+    Task<string> DeleteTunnelAsync([Authorize("Bearer")] string token, string accountId, string tunnelId);
 
     [Get("/zones")]
     Task<ZoneListResponse> GetZonesAsync([Authorize("Bearer")] string token, [AliasAs("name")] string? name = null);

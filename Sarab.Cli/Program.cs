@@ -38,6 +38,14 @@ class Program
             serviceProvider.GetRequiredService<IllusionistService>()
         ));
 
+        rootCommand.AddCommand(new ListCommand(
+            serviceProvider.GetRequiredService<IllusionistService>()
+        ));
+
+        rootCommand.AddCommand(new NukeCommand(
+            serviceProvider.GetRequiredService<IllusionistService>()
+        ));
+
         return await rootCommand.InvokeAsync(args);
     }
 
