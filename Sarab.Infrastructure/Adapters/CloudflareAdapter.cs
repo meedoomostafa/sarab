@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Sarab.Core.Entities;
 using Sarab.Core.Interfaces;
@@ -20,18 +21,25 @@ public class CloudflareAdapter : ICloudflareAdapter
     {
         try
         {
-            var response = await _api.VerifyTokenAsync(apiToken);
-            if (!response.Success || response.Result?.Status != "active")
+            // 1. Verify Token Status
+            var verifyResponse = await _api.VerifyTokenAsync(apiToken);
+            if (!verifyResponse.Success || verifyResponse.Result?.Status != "active")
             {
                 throw new Exception("Token is invalid or not active.");
             }
 
-            // TODO: Fetch real Account ID
-            return "unknown-account-id";
+            // 2. Fetch Account ID
+            var accountsResponse = await _api.GetAccountsAsync(apiToken);
+            if (!accountsResponse.Success || accountsResponse.Result.Length == 0)
+            {
+                throw new Exception("Token is valid but has no access to any accounts.");
+            }
+
+            return accountsResponse.Result[0].Id;
         }
         catch (ApiException ex)
         {
-            throw new Exception($"Cloudflare API Error: {ex.StatusCode}");
+            throw new Exception($"Cloudflare API Error: {ex.StatusCode} - {ex.Content}");
         }
     }
 
@@ -48,15 +56,68 @@ public class CloudflareAdapter : ICloudflareAdapter
         return response.Result.Id;
     }
 
-    public Task CreateDnsRecordAsync(Token token, string startUrl, string subdomain)
+    public async Task<string> GetTunnelTokenAsync(Token token, string tunnelId)
     {
-        // TODO: Implement DNS creation logic
-        return Task.CompletedTask;
+        if (string.IsNullOrEmpty(token.AccountId))
+            throw new Exception("Account ID missing for token.");
+
+        var response = await _api.GetTunnelTokenAsync(token.ApiToken, token.AccountId, tunnelId);
+
+        if (!response.Success || string.IsNullOrEmpty(response.Result))
+            throw new Exception("Failed to retrieve tunnel token.");
+
+        return response.Result;
     }
 
-    public Task DeleteDnsRecordAsync(Token token, string recordId)
+    public async Task<string> CreateDnsRecordAsync(Token token, string zoneId, string name, string content, bool proxied = true)
     {
-        // TODO: Implement DNS deletion
-        return Task.CompletedTask;
+        var request = new CreateDnsRecordRequest
+        {
+            Type = "CNAME",
+            Name = name,
+            Content = content,
+            Proxied = proxied,
+            Ttl = 1 // Auto
+        };
+
+        var response = await _api.CreateDnsRecordAsync(token.ApiToken, zoneId, request);
+
+        if (!response.Success || response.Result == null)
+            throw new Exception("Failed to create DNS record.");
+
+        return response.Result.Id;
+    }
+
+    public async Task DeleteDnsRecordAsync(Token token, string zoneId, string recordId)
+    {
+        await _api.DeleteDnsRecordAsync(token.ApiToken, zoneId, recordId);
+    }
+
+    public async Task<string?> GetZoneIdAsync(Token token, string domainName)
+    {
+        // Cloudflare Zones API matches exact or fuzzy. We need the root zone.
+        // E.g. for "sub.example.com", we might need to search for "example.com"
+        // For simplicity, we search for the exact match first.
+        // Ideally, we'd traverse up the domain tree.
+
+        var response = await _api.GetZonesAsync(token.ApiToken, domainName);
+        if (response.Success && response.Result.Length > 0)
+        {
+            return response.Result[0].Id;
+        }
+
+        // Try searching for the parent domain if not found (simple one-level up check)
+        var parts = domainName.Split('.');
+        if (parts.Length > 2)
+        {
+            var parent = string.Join(".", parts.Skip(1));
+            response = await _api.GetZonesAsync(token.ApiToken, parent);
+            if (response.Success && response.Result.Length > 0)
+            {
+                return response.Result[0].Id;
+            }
+        }
+
+        return null;
     }
 }

@@ -12,6 +12,19 @@ public interface ICloudflareApi
     [Post("/accounts/{accountId}/tunnels")]
     Task<CreateTunnelResponse> CreateTunnelAsync([Authorize("Bearer")] string token, string accountId, [Body] CreateTunnelRequest request);
 
-    // TODO: Add DNS record endpoints
+    [Get("/accounts/{accountId}/tunnels/{tunnelId}/token")]
+    Task<TunnelTokenResponse> GetTunnelTokenAsync([Authorize("Bearer")] string token, string accountId, string tunnelId);
+
+    [Get("/zones")]
+    Task<ZoneListResponse> GetZonesAsync([Authorize("Bearer")] string token, [AliasAs("name")] string? name = null);
+
+    [Post("/zones/{zoneId}/dns_records")]
+    Task<DnsRecordResponse> CreateDnsRecordAsync([Authorize("Bearer")] string token, string zoneId, [Body] CreateDnsRecordRequest request);
+
+    [Delete("/zones/{zoneId}/dns_records/{recordId}")]
+    Task<string> DeleteDnsRecordAsync([Authorize("Bearer")] string token, string zoneId, string recordId);
+
+    [Get("/accounts")]
+    Task<AccountListResponse> GetAccountsAsync([Authorize("Bearer")] string token);
 }
 
