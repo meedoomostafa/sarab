@@ -1,6 +1,7 @@
 # Build results
 [Bb]in/
 [Oo]bj/
+dist/
 
 # User-specific files
 *.suo

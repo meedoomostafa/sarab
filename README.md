@@ -1,0 +1,139 @@
+# Sarab
+
+Sarab is a CLI tool designed to creates temporary public URLs for local services using Cloudflare Tunnels. It automates the process of creating tunnels, DNS records, and ingress rules, providing a streamlined experience for exposing local ports to the internet.
+
+## Features
+
+*   **Instant Exposure:** Quickly expose local ports (e.g., `localhost:3000`) to public subdomains.
+*   **Multi-Identity Support:** Manage and switch between multiple Cloudflare API tokens.
+*   **Zero-Configuration:** Automates DNS CNAME creation, tunnel setup, and ingress routing.
+*   **Automatic Cleanup:** Removes tunnels and DNS records upon exit to prevent stale records.
+*   **Self-Contained:** Distributed as a single binary with no external runtime dependencies.
+
+## Installation
+
+### From Source
+
+You can build and install Sarab directly from the source code.
+
+**Prerequisites:**
+*   .NET 10 SDK (Required only for building from source)
+*   Cloudflare Account (Required for API Tokens)
+
+**Installation Script:**
+
+The provided script will detect your operating system, build the project, and install the binary to your local path.
+
+```bash
+# Download and run the script directly (Recommended)
+curl -sL https://raw.githubusercontent.com/meedoomostafa/sarab/main/install.sh | bash
+```
+
+Alternatively, you can clone and run it manually:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+This script will:
+1.  **Fetch the Source**: Clones the repository if you don't have it (or updates it if you do).
+2.  **Autodetect OS**: Builds for Linux, macOS, or Windows/WSL.
+3.  **Install Binary**: Places `sarab` in `~/.local/bin/`.
+
+> **Note:** Ensure `~/.local/bin` is in your `PATH`.
+> Add `export PATH="$HOME/.local/bin:$PATH"` to your `.bashrc` or `.zshrc` if needed.
+
+### Manual Build
+
+If you prefer to build manually:
+
+**Linux:**
+```bash
+dotnet publish Sarab.Cli/Sarab.Cli.csproj -r linux-x64 --self-contained true -o ./publish
+```
+
+**macOS:**
+```bash
+dotnet publish Sarab.Cli/Sarab.Cli.csproj -r osx-x64 --self-contained true -o ./publish
+```
+
+**Windows:**
+```powershell
+dotnet publish Sarab.Cli/Sarab.Cli.csproj -r win-x64 --self-contained true -o ./publish
+```
+
+## Usage
+
+### 1. Initialization
+
+Initialize the Sarab environment. This command creates the local database (`~/.sarab/sarab.db`) and downloads the required `cloudflared` binary if it is not present.
+
+```bash
+sarab init
+```
+
+### 2. Token Management
+
+Sarab requires a Cloudflare API Token to interact with your account. You can manage multiple tokens using aliases.
+
+**Add a Token:**
+```bash
+sarab token add <alias> <token>
+```
+*   `<alias>`: A unique name for this token (e.g., `personal`, `work`).
+*   `<token>`: Your Cloudflare API Token (Permissions required: Zone.DNS, Account.Tunnel).
+
+**List Tokens:**
+Displays all stored tokens and their status.
+```bash
+sarab token list
+```
+
+**Remove a Token:**
+```bash
+sarab token rm <alias>
+```
+
+### 3. Expose Services
+
+The primary command to expose a local service to the internet.
+
+```bash
+sarab expose <port> [options]
+```
+
+**Arguments:**
+*   `<port>`: The local port number to expose (e.g., `8080`).
+
+**Options:**
+*   `--subdomain <name>`: Request a specific subdomain (e.g., `my-app`). If omitted, a random 5-character subdomain is generated (e.g., `sarab-x92a1`).
+*   `--identity <alias>`: Use a specific token alias. If omitted, Sarab uses the first available active token.
+*   `--local-host <url>`: Check/Forward traffic to a specific local host (default is `localhost`).
+
+**Examples:**
+```bash
+# Expose port 3000 with a random subdomain
+sarab expose 3000
+
+# Expose port 5000 as 'api-v1.yourdomain.com' using the 'work' identity
+sarab expose 5000 --subdomain api-v1 --identity work
+```
+
+### 4. Maintenance
+
+**List Active Tunnels:**
+Displays a list of active tunnels created by Sarab across all configured identities.
+```bash
+sarab list
+```
+
+**Nuke (Emergency Cleanup):**
+If Sarab was terminated forcefully and left "ghost" records, use this command to delete all tunnels and DNS records associated with Sarab.
+```bash
+sarab nuke
+```
+*   **Warning:** This will delete *all* resources named with the `sarab-` prefix.
+
+## License
+MIT
