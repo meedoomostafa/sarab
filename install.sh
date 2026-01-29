@@ -9,7 +9,7 @@ NC='\033[0m'
 REPO_URL="https://github.com/meedoomostafa/sarab.git"
 INSTALL_DIR="Sarab"
 
-# 1. Prepare Source
+# Prepare Source
 if [ -f "Sarab.sln" ]; then
     echo -e "${BLUE}Running inside repository.${NC}"
 else
@@ -48,6 +48,15 @@ echo -e "${BLUE}Installing to ~/.local/bin...${NC}"
 mkdir -p ~/.local/bin
 cp "./dist/$BINARY_NAME" ~/.local/bin/sarab
 chmod +x ~/.local/bin/sarab
+
+# Add to PATH (Fish Support)
+if command -v fish &> /dev/null; then
+    # If using fish, add path permanently
+    if [[ "$SHELL" == *"fish"* ]]; then
+        echo -e "${BLUE}Fish shell detected. Adding to path...${NC}"
+        fish -c "fish_add_path -U ~/.local/bin"
+    fi
+fi
 
 echo -e "${GREEN}Installation Complete.${NC}"
 echo -e "Run 'sarab --version' to verify."
