@@ -76,7 +76,7 @@ try_download_release() {
         fi
 
         echo -e "${BLUE}Installing to ~/.local/bin...${NC}"
-        mkdir -p ~/.local/bin
+        mkdir -p "$HOME/.local/bin"
         cp "$SOURCE_BIN" "$BINARY_DEST"
         chmod +x "$BINARY_DEST"
         
@@ -144,7 +144,7 @@ if [[ "$RID" == "win-x64" ]]; then
 fi
 
 echo -e "${BLUE}Installing to ~/.local/bin...${NC}"
-mkdir -p ~/.local/bin
+mkdir -p "$HOME/.local/bin"
 cp "./dist/$BINARY_NAME" "$BINARY_DEST"
 chmod +x "$BINARY_DEST"
 
