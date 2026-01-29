@@ -103,12 +103,16 @@ The primary command to expose a local service to the internet.
 sarab expose <port> [options]
 ```
 
+**Modes:**
+*   **Quick Tunnel (Default):** If no tokens are added, Sarab creates a random `*.trycloudflare.com` URL. No account required.
+*   **Authenticated Tunnel:** If a token is added, Sarab uses your Cloudflare account to create a stable, named tunnel on your custom domain.
+
 **Arguments:**
 *   `<port>`: The local port number to expose (e.g., `8080`).
 
 **Options:**
-*   `--subdomain <name>`: Request a specific subdomain (e.g., `my-app`). If omitted, a random 5-character subdomain is generated (e.g., `sarab-x92a1`).
-*   `--identity <alias>`: Use a specific token alias. If omitted, Sarab uses the first available active token.
+*   `--subdomain <name>`: Request a specific subdomain (Authenticated mode only).
+*   `--identity <alias>`: Use a specific token alias.
 *   `--local-host <url>`: Check/Forward traffic to a specific local host (default is `localhost`).
 
 **Examples:**

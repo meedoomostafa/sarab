@@ -22,15 +22,29 @@ public class IllusionistService
 
     public async Task ExposePortAsync(int port, string? subdomain = null)
     {
-        // Retrieve token
+        // 1. Ensure binary exists first
+        await _processManager.EnsureBinaryExistsAsync();
+
+        // 2. Try to get a token
         var token = await _rotator.GetNextTokenAsync();
+
         if (token == null)
         {
-            throw new Exception("No active tokens found. Please add a token using 'sarab token add'.");
+            // --- QUICK TUNNEL (TryCloudflare) ---
+            Console.WriteLine("[INFO] No active tokens found. Falling back to TryCloudflare (Quick Tunnel)...");
+            Console.WriteLine("[INFO] This will generate a random *.trycloudflare.com URL.");
+
+            if (!string.IsNullOrEmpty(subdomain))
+            {
+                Console.WriteLine("[WARN] --subdomain is ignored in Quick Tunnel mode. Add a token to use custom domains.");
+            }
+
+            await _processManager.StartQuickTunnelAsync(port);
+            return;
         }
 
-        // Ensure binary
-        await _processManager.EnsureBinaryExistsAsync();
+        // --- AUTHENTICATED TUNNEL (Custom Domain) ---
+        Console.WriteLine($"[INFO] Using identity: '{token.Alias}'");
 
         // Refresh account ID
         if (string.IsNullOrEmpty(token.AccountId))
@@ -45,7 +59,7 @@ public class IllusionistService
         // Resolve zone
         if (string.IsNullOrEmpty(subdomain))
         {
-            throw new Exception("Auto-generated subdomains require a default zone logic which is not yet implemented. Please provide a full hostname via --subdomain (e.g. --subdomain app.yourdomain.com).");
+            throw new Exception("Authenticated mode requires a subdomain. Use --subdomain <name>.");
         }
         else
         {

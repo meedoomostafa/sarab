@@ -34,6 +34,7 @@ public class ProcessManager : IProcessManager
         {
             await Cli.Wrap(path)
                      .WithArguments("--version")
+                     .WithValidation(CommandResultValidation.None)
                      .ExecuteAsync();
         }
         catch (Exception ex)
@@ -45,6 +46,7 @@ public class ProcessManager : IProcessManager
     public async Task StartTunnelAsync(string tunnelToken, string url)
     {
         var path = await GetBinaryPathAsync();
+        var logHandler = CreateLogCleaner();
 
         // Execute tunnel via named token
         var cmd = Cli.Wrap(path)
@@ -53,27 +55,61 @@ public class ProcessManager : IProcessManager
                          .Add("run")
                          .Add("--token")
                          .Add(tunnelToken)
-                     // .Add("--url") // Named tunnels managed remotely don't use --url in 'run' command usually?
-                     // Wait, if we use 'tunnel run', it connects to the cloud. 
-                     // The INGRESS rules (which we configured via API) tell the cloud where to route traffic.
-                     // But the LOCAL cloudflared process needs to know to proxy.
-                     // For named tunnels, 'cloudflared tunnel run' reads ingress from remote config (if managed).
-                     // So we DO NOT need --url here if config is remote.
-                     // Remove --url argument.
                      )
-                     // Redirect output
-                     .WithStandardOutputPipe(PipeTarget.ToDelegate(Console.WriteLine))
-                     .WithStandardErrorPipe(PipeTarget.ToDelegate(Console.Error.WriteLine));
+                     .WithStandardOutputPipe(PipeTarget.ToDelegate(logHandler))
+                     .WithStandardErrorPipe(PipeTarget.ToDelegate(logHandler));
 
-        // Execute tunnel process
         await cmd.ExecuteAsync();
+    }
+
+    public async Task StartQuickTunnelAsync(int port)
+    {
+        var path = await GetBinaryPathAsync();
+        var logHandler = CreateLogCleaner();
+
+        Console.WriteLine($"Starting Quick Tunnel (TryCloudflare) for port {port}...");
+
+        var cmd = Cli.Wrap(path)
+                     .WithArguments(args => args
+                         .Add("tunnel")
+                         .Add("--url")
+                         .Add($"http://localhost:{port}")
+                     )
+                     .WithStandardOutputPipe(PipeTarget.ToDelegate(logHandler))
+                     .WithStandardErrorPipe(PipeTarget.ToDelegate(logHandler));
+
+        await cmd.ExecuteAsync();
+    }
+
+    private Action<string> CreateLogCleaner()
+    {
+        return line =>
+        {
+            // Strip timestamp and level (e.g., "2026-01-29T... INF ")
+            var cleanLine = System.Text.RegularExpressions.Regex.Replace(line, @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\s+[A-Z]+\s+", "");
+
+            // Filter out known noise
+            if (cleanLine.StartsWith("Cannot determine default configuration path") ||
+                cleanLine.StartsWith("Version ") ||
+                cleanLine.StartsWith("GOOS: ") ||
+                cleanLine.StartsWith("Settings: ") ||
+                cleanLine.StartsWith("Autoupdate frequency") ||
+                cleanLine.StartsWith("Generated Connector ID") ||
+                cleanLine.StartsWith("Initial protocol") ||
+                cleanLine.StartsWith("ICMP proxy") ||
+                cleanLine.StartsWith("Starting metrics server") ||
+                cleanLine.StartsWith("Tunnel connection curve") ||
+                cleanLine.Contains("Thank you for trying Cloudflare Tunnel"))
+            {
+                return;
+            }
+
+            Console.WriteLine(cleanLine);
+        };
     }
 
     public Task StopAllTunnelsAsync()
     {
-        // In a CLI context, stopping usually means killing this process tree.
-        // If we spawned background processes, we'd need to track Process IDs.
-        // For now, relying on OS cleanup or Ctrl+C propagation.
         return Task.CompletedTask;
     }
 }
