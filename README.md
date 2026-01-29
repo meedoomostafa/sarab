@@ -63,6 +63,21 @@ dotnet publish Sarab.Cli/Sarab.Cli.csproj -r osx-x64 --self-contained true -o ./
 dotnet publish Sarab.Cli/Sarab.Cli.csproj -r win-x64 --self-contained true -o ./publish
 ```
 
+### Uninstallation
+
+To remove the Sarab binary, run the uninstall script:
+
+```bash
+./uninstall.sh
+```
+
+This will remove the `sarab` binary from `~/.local/bin`.
+To fully remove the source code, you can delete the repository folder:
+
+```bash
+rm -rf ~/myTools/Sarab
+```
+
 ## Usage
 
 ### 1. Initialization
