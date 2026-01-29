@@ -21,6 +21,12 @@ public class TokenRotator
         return await _repository.GetBestTokenAsync();
     }
 
+    public async Task<Token?> GetTokenByAliasAsync(string alias)
+    {
+        var tokens = await _repository.ListAsync();
+        return tokens.FirstOrDefault(t => t.Alias.Equals(alias, StringComparison.OrdinalIgnoreCase));
+    }
+
     public async Task ReportFailureAsync(Token token)
     {
         token.FailureCount++;

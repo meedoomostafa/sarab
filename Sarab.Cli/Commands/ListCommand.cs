@@ -42,9 +42,9 @@ public class ListCommand : Command
                     foreach (var tunnel in identity.Value)
                     {
                         table.AddRow(
-                            new Markup($"[blue]{identity.Key}[/]"),
-                            new Markup($"[green]{tunnel.Name}[/]"),
-                            new Markup($"[grey]{tunnel.Id}[/]"),
+                            new Markup($"[blue]{Markup.Escape(identity.Key)}[/]"),
+                            new Markup($"[green]{Markup.Escape(tunnel.Name)}[/]"),
+                            new Markup($"[grey]{Markup.Escape(tunnel.Id)}[/]"),
                             new Markup(tunnel.DeletedAt.HasValue ? "[red]Deleted[/]" : "[green]Active[/]")
                         );
                     }

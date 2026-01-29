@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Sarab.Core.DTOs;
 using Sarab.Core.Interfaces;
+using Sarab.Core.Entities;
 
 namespace Sarab.Core.Services;
 
@@ -20,13 +21,26 @@ public class IllusionistService
         _adapter = adapter;
     }
 
-    public async Task ExposePortAsync(int port, string? subdomain = null, string localHost = "localhost", string scheme = "http", bool noTlsVerify = false)
+    public async Task ExposePortAsync(int port, string? subdomain = null, string localHost = "localhost", string scheme = "http", bool noTlsVerify = false, string? identity = null)
     {
-        // 1. Ensure binary exists first
+        // Ensure binary exists first
         await _processManager.EnsureBinaryExistsAsync();
 
-        // 2. Try to get a token
-        var token = await _rotator.GetNextTokenAsync();
+        // Try to get a token
+        Token? token = null;
+
+        if (!string.IsNullOrEmpty(identity))
+        {
+            token = await _rotator.GetTokenByAliasAsync(identity);
+            if (token == null)
+            {
+                throw new Exception($"Identity '{identity}' not found.");
+            }
+        }
+        else
+        {
+            token = await _rotator.GetNextTokenAsync();
+        }
 
         if (token == null)
         {

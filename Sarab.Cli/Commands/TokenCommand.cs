@@ -60,9 +60,9 @@ public class AddTokenCommand : Command
 
                     AnsiConsole.MarkupLine($"[green]✓ Token '{alias}' added successfully![/]");
                 }
-                catch (System.Exception ex)
+                catch (Exception ex)
                 {
-                    AnsiConsole.MarkupLine($"[red]Error adding token: {ex.Message}[/]");
+                    AnsiConsole.MarkupLine($"[red]Error adding token: {Markup.Escape(ex.Message)}[/]");
                 }
             });
     }
@@ -92,7 +92,7 @@ public class ListTokensCommand : Command
         foreach (var t in tokens)
         {
             table.AddRow(
-                t.Alias,
+                Markup.Escape(t.Alias),
                 t.IsActive ? "[green]Active[/]" : "[red]Inactive[/]",
                 t.FailureCount.ToString(),
                 t.LastUsedAt?.ToString() ?? "Never"
