@@ -23,9 +23,6 @@ public class IllusionistService
 
     public async Task ExposePortAsync(int port, string? subdomain = null, string localHost = "localhost", string scheme = "http", bool noTlsVerify = false, string? identity = null)
     {
-        // Ensure binary exists first
-        await _processManager.EnsureBinaryExistsAsync();
-
         // Try to get a token
         Token? token = null;
 
@@ -53,12 +50,18 @@ public class IllusionistService
                 Console.WriteLine("[WARN] --subdomain is ignored in Quick Tunnel mode. Add a token to use custom domains.");
             }
 
+            // Ensure binary exists first
+            await _processManager.EnsureBinaryExistsAsync();
+
             await _processManager.StartQuickTunnelAsync(port, localHost, scheme, noTlsVerify);
             return;
         }
 
         // --- AUTHENTICATED TUNNEL (Custom Domain) ---
         Console.WriteLine($"[INFO] Using identity: '{token.Alias}'");
+
+        // Ensure binary exists first
+        await _processManager.EnsureBinaryExistsAsync();
 
         // Refresh account ID
         if (string.IsNullOrEmpty(token.AccountId))

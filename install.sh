@@ -104,6 +104,11 @@ setup_path() {
 # 1. Try to download release
 if try_download_release; then
     setup_path
+    
+    # Initialize Database
+    echo -e "${BLUE}Initializing database...${NC}"
+    "$BINARY_DEST" init
+    
     echo -e "${GREEN}Installation Complete (from Release).${NC}"
     echo -e "Run 'sarab --version' to verify."
     exit 0
@@ -149,6 +154,10 @@ cp "./dist/$BINARY_NAME" "$BINARY_DEST"
 chmod +x "$BINARY_DEST"
 
 setup_path
+
+# Initialize Database
+echo -e "${BLUE}Initializing database...${NC}"
+"$BINARY_DEST" init
 
 echo -e "${GREEN}Installation Complete (from Source).${NC}"
 echo -e "Run 'sarab --version' to verify."

@@ -5,19 +5,40 @@ using Microsoft.Data.Sqlite;
 using Sarab.Core.Entities;
 using Sarab.Core.Interfaces;
 using Dapper;
+using System.IO;
 
 namespace Sarab.Infrastructure.Persistence;
 
 public class SqliteRepository : ITokenRepository
 {
     private readonly string _connectionString;
+    private readonly string _dbPath;
 
     public SqliteRepository(string dbPath)
     {
+        _dbPath = dbPath;
         _connectionString = $"Data Source={dbPath}";
     }
 
-    private SqliteConnection GetConnection() => new SqliteConnection(_connectionString);
+    private SqliteConnection GetConnection()
+    {
+        return new SqliteConnection(_connectionString);
+    }
+
+    // Helper to ensure DB exists before critical write ops if needed? 
+    // Actually, simply calling 'sarab init' in install.sh explains why it was missing.
+    // I will stick to fixing install.sh and maybe wrapping one method.
+    // Let's just do install.sh first.
+
+    // Wait, I am replacing content. Sticking to simple changes.
+    // I will only modify install.sh for now as the robust fix.
+    // AND I will add the 'System.IO' check if I can? 
+    // Let's skip SqliteRepository changes if install.sh covers it. 
+    // User asked "why sqllite error". Answer: "install.sh didn't init".
+    // I will add 'sarab init' to install.sh.
+    // I will also modify SqliteRepository to be safer?
+    // Let's just modify install.sh.
+
 
     public async Task InitializeAsync()
     {
