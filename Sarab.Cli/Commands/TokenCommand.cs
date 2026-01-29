@@ -13,6 +13,37 @@ public class TokenCommand : Command
     {
         AddCommand(new AddTokenCommand(repository, adapter));
         AddCommand(new ListTokensCommand(repository));
+        AddCommand(new RmTokenCommand(repository));
+    }
+}
+
+public class RmTokenCommand : Command
+{
+    private readonly ITokenRepository _repository;
+
+    public RmTokenCommand(ITokenRepository repository)
+        : base("rm", "Remove a stored token by alias")
+    {
+        _repository = repository;
+
+        var aliasArg = new Argument<string>("alias", "The alias of the token to remove");
+        AddArgument(aliasArg);
+
+        this.SetHandler(ExecuteAsync, aliasArg);
+    }
+
+    private async Task ExecuteAsync(string alias)
+    {
+        var removed = await _repository.RemoveAsync(alias);
+
+        if (removed)
+        {
+            AnsiConsole.MarkupLine($"[green]✓ Token '{Markup.Escape(alias)}' removed successfully![/]");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine($"[yellow]Token '{Markup.Escape(alias)}' not found.[/]");
+        }
     }
 }
 
