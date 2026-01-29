@@ -35,6 +35,12 @@ public interface ICloudflareApi
     [Delete("/zones/{zoneId}/dns_records/{recordId}")]
     Task<string> DeleteDnsRecordAsync([Authorize("Bearer")] string token, string zoneId, string recordId);
 
+    [Put("/zones/{zoneId}/dns_records/{recordId}")]
+    Task<DnsRecordResponse> UpdateDnsRecordAsync([Authorize("Bearer")] string token, string zoneId, string recordId, [Body] CreateDnsRecordRequest body);
+
+    [Get("/zones/{zoneId}/dns_records")]
+    Task<DnsListResponse> GetDnsRecordsAsync([Authorize("Bearer")] string token, string zoneId, [AliasAs("name")] string? name = null);
+
     [Get("/accounts")]
     Task<AccountListResponse> GetAccountsAsync([Authorize("Bearer")] string token);
 }

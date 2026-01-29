@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Sarab.Core.DTOs;
 
 namespace Sarab.Infrastructure.DTOs;
 
@@ -51,4 +52,13 @@ public class ZoneResult
 
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
+}
+
+public class DnsListResponse
+{
+    [JsonPropertyName("success")]
+    public bool Success { get; set; }
+
+    [JsonPropertyName("result")]
+    public DnsListResult[] Result { get; set; } = Array.Empty<DnsListResult>();
 }

@@ -43,19 +43,26 @@ public class ProcessManager : IProcessManager
         }
     }
 
-    public async Task StartTunnelAsync(string tunnelToken, string url)
+    public async Task StartTunnelAsync(string tunnelToken, string url, string? configPath = null)
     {
         var path = await GetBinaryPathAsync();
         var logHandler = CreateLogCleaner();
 
         // Execute tunnel via named token
         var cmd = Cli.Wrap(path)
-                     .WithArguments(args => args
-                         .Add("tunnel")
-                         .Add("run")
-                         .Add("--token")
-                         .Add(tunnelToken)
-                     )
+                     .WithArguments(args =>
+                     {
+                         args.Add("tunnel");
+
+                         if (!string.IsNullOrEmpty(configPath))
+                         {
+                             args.Add("--config").Add(configPath);
+                         }
+
+                         args.Add("run")
+                             .Add("--token")
+                             .Add(tunnelToken);
+                     })
                      .WithStandardOutputPipe(PipeTarget.ToDelegate(logHandler))
                      .WithStandardErrorPipe(PipeTarget.ToDelegate(logHandler));
 
@@ -106,6 +113,10 @@ public class ProcessManager : IProcessManager
                 cleanLine.StartsWith("ICMP proxy") ||
                 cleanLine.StartsWith("Starting metrics server") ||
                 cleanLine.StartsWith("Tunnel connection curve") ||
+                cleanLine.StartsWith("Starting tunnel tunnelID") ||
+                cleanLine.StartsWith("Registered tunnel connection") ||
+                cleanLine.Contains("event=0") ||
+                cleanLine.Contains("protocol=quic") ||
                 cleanLine.Contains("Thank you for trying Cloudflare Tunnel"))
             {
                 return;

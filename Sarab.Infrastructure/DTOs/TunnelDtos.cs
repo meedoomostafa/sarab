@@ -8,7 +8,7 @@ public class CreateTunnelRequest
     public required string Name { get; set; }
 
     [JsonPropertyName("config_src")]
-    public string ConfigSrc { get; set; } = "cloudflare";
+    public string ConfigSrc { get; set; } = "local";
 }
 
 public class CreateTunnelResponse
@@ -24,6 +24,9 @@ public class TunnelResult
 {
     [JsonPropertyName("id")]
     public required string Id { get; set; }
+
+    [JsonPropertyName("token")]
+    public string? Token { get; set; }
 }
 
 public class TunnelTokenResponse

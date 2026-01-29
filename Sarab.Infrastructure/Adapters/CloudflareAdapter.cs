@@ -45,17 +45,22 @@ public class CloudflareAdapter : ICloudflareAdapter
         }
     }
 
-    public async Task<string> CreateTunnelAsync(Token token, string name)
+    public async Task<(string Id, string? Token)> CreateTunnelAsync(Token token, string name)
     {
         if (string.IsNullOrEmpty(token.AccountId))
             throw new Exception("Account ID missing for token.");
 
         var request = new CreateTunnelRequest { Name = name };
-        var response = await _api.CreateTunnelAsync(token.ApiToken, token.AccountId, request);
-
-        if (!response.Success || response.Result == null) throw new Exception("Failed to create tunnel");
-
-        return response.Result.Id;
+        try
+        {
+            var response = await _api.CreateTunnelAsync(token.ApiToken, token.AccountId, request);
+            if (!response.Success || response.Result == null) throw new Exception("Failed to create tunnel (Success=false)");
+            return (response.Result.Id, response.Result.Token);
+        }
+        catch (ApiException ex)
+        {
+            throw new Exception($"Cloudflare API Error (CreateTunnel): {ex.StatusCode} - {ex.Content}");
+        }
     }
 
     public async Task<string> GetTunnelTokenAsync(Token token, string tunnelId)
@@ -63,12 +68,18 @@ public class CloudflareAdapter : ICloudflareAdapter
         if (string.IsNullOrEmpty(token.AccountId))
             throw new Exception("Account ID missing for token.");
 
-        var response = await _api.GetTunnelTokenAsync(token.ApiToken, token.AccountId, tunnelId);
-
-        if (!response.Success || string.IsNullOrEmpty(response.Result))
-            throw new Exception("Failed to retrieve tunnel token.");
-
-        return response.Result;
+        try
+        {
+            var response = await _api.GetTunnelTokenAsync(token.ApiToken, token.AccountId, tunnelId);
+            if (!response.Success || string.IsNullOrEmpty(response.Result))
+                throw new Exception("Failed to retrieve tunnel token.");
+            return response.Result;
+        }
+        catch (ApiException ex)
+        {
+            var uri = ex.RequestMessage?.RequestUri?.ToString() ?? "Unknown URI";
+            throw new Exception($"Cloudflare API Error (GetTunnelToken): {ex.StatusCode} - {uri} - {ex.Content}");
+        }
     }
 
     public async Task ConfigureTunnelAsync(Token token, string tunnelId, string hostname, string localUrl, bool noTlsVerify = false)
@@ -103,10 +114,16 @@ public class CloudflareAdapter : ICloudflareAdapter
         };
 
         var request = new UpdateTunnelConfigRequest { Config = config };
-        var response = await _api.UpdateTunnelConfigAsync(token.ApiToken, token.AccountId, tunnelId, request);
-
-        if (!response.Success)
-            throw new Exception("Failed to configure tunnel ingress rules.");
+        try
+        {
+            var response = await _api.UpdateTunnelConfigAsync(token.ApiToken, token.AccountId, tunnelId, request);
+            if (!response.Success)
+                throw new Exception("Failed to configure tunnel ingress rules.");
+        }
+        catch (ApiException ex)
+        {
+            throw new Exception($"Cloudflare API Error (ConfigureTunnel): {ex.StatusCode} - {ex.Content}");
+        }
     }
 
     public async Task<List<TunnelDetail>> ListTunnelsAsync(Token token)
@@ -115,20 +132,27 @@ public class CloudflareAdapter : ICloudflareAdapter
             throw new Exception("Account ID missing for token.");
 
         // List active tunnels (is_deleted = false)
-        var response = await _api.GetTunnelsAsync(token.ApiToken, token.AccountId, isDeleted: false);
+        try
+        {
+            var response = await _api.GetTunnelsAsync(token.ApiToken, token.AccountId, isDeleted: false);
+            if (!response.Success)
+                throw new Exception("Failed to list tunnels.");
 
-        if (!response.Success)
-            throw new Exception("Failed to list tunnels.");
-
-        return response.Result
-            .Where(t => t.DeletedAt == null)
-            .Select(t => new TunnelDetail
-            {
-                Id = t.Id,
-                Name = t.Name,
-                DeletedAt = t.DeletedAt
-            })
-            .ToList();
+            return response.Result
+                .Where(t => t.DeletedAt == null)
+                .Select(t => new TunnelDetail
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    DeletedAt = t.DeletedAt
+                })
+                .ToList();
+        }
+        catch (ApiException ex)
+        {
+            // For listing, we might just return empty or rethrow
+            throw new Exception($"Cloudflare API Error (ListTunnels): {ex.StatusCode} - {ex.Content}");
+        }
     }
 
     public async Task DeleteTunnelAsync(Token token, string tunnelId)
@@ -136,7 +160,14 @@ public class CloudflareAdapter : ICloudflareAdapter
         if (string.IsNullOrEmpty(token.AccountId))
             throw new Exception("Account ID missing for token.");
 
-        await _api.DeleteTunnelAsync(token.ApiToken, token.AccountId, tunnelId);
+        try
+        {
+            await _api.DeleteTunnelAsync(token.ApiToken, token.AccountId, tunnelId);
+        }
+        catch (ApiException ex)
+        {
+            throw new Exception($"Cloudflare API Error (DeleteTunnel): {ex.StatusCode} - {ex.Content}");
+        }
     }
 
     public async Task<string> CreateDnsRecordAsync(Token token, string zoneId, string name, string content, bool proxied = true)
@@ -150,17 +181,73 @@ public class CloudflareAdapter : ICloudflareAdapter
             Ttl = 1 // Auto
         };
 
-        var response = await _api.CreateDnsRecordAsync(token.ApiToken, zoneId, request);
-
-        if (!response.Success || response.Result == null)
-            throw new Exception("Failed to create DNS record.");
-
-        return response.Result.Id;
+        try
+        {
+            var response = await _api.CreateDnsRecordAsync(token.ApiToken, zoneId, request);
+            if (!response.Success || response.Result == null)
+                throw new Exception("Failed to create DNS record.");
+            return response.Result.Id;
+        }
+        catch (ApiException ex)
+        {
+            throw new Exception($"Cloudflare API Error (CreateDnsRecord): {ex.StatusCode} - {ex.Content}");
+        }
     }
 
     public async Task DeleteDnsRecordAsync(Token token, string zoneId, string recordId)
     {
-        await _api.DeleteDnsRecordAsync(token.ApiToken, zoneId, recordId);
+        try
+        {
+            await _api.DeleteDnsRecordAsync(token.ApiToken, zoneId, recordId);
+        }
+        catch (ApiException ex)
+        {
+            // Ignore cleanup errors often, but logging details helps
+            throw new Exception($"Cloudflare API Error (DeleteDnsRecord): {ex.StatusCode} - {ex.Content}");
+        }
+    }
+
+    public async Task<string> UpdateDnsRecordAsync(Token token, string zoneId, string recordId, string name, string content, bool proxied = true)
+    {
+        var request = new CreateDnsRecordRequest
+        {
+            Type = "CNAME",
+            Name = name,
+            Content = content,
+            Proxied = proxied,
+            Ttl = 1
+        };
+
+        try
+        {
+            var response = await _api.UpdateDnsRecordAsync(token.ApiToken, zoneId, recordId, request);
+            if (!response.Success || response.Result == null)
+                throw new Exception("Failed to update DNS record.");
+            return response.Result.Id;
+        }
+        catch (ApiException ex)
+        {
+            throw new Exception($"Cloudflare API Error (UpdateDnsRecord): {ex.StatusCode} - {ex.Content}");
+        }
+    }
+
+    public async Task<List<DnsListResult>> ListDnsRecordsAsync(Token token, string zoneId, string? name = null)
+    {
+        if (string.IsNullOrEmpty(token.AccountId))
+            throw new Exception("Account ID missing for token.");
+
+        try
+        {
+            var response = await _api.GetDnsRecordsAsync(token.ApiToken, zoneId, name);
+            if (!response.Success)
+                throw new Exception("Failed to list DNS records.");
+            return response.Result.ToList();
+        }
+        catch (ApiException ex)
+        {
+            var uri = ex.RequestMessage?.RequestUri?.ToString() ?? "Unknown URI";
+            throw new Exception($"Cloudflare API Error (ListDnsRecords): {ex.StatusCode} - {uri} - {ex.Content}");
+        }
     }
 
     public async Task<string?> GetZoneIdAsync(Token token, string domainName)

@@ -59,6 +59,7 @@ public class IllusionistService
 
         // --- AUTHENTICATED TUNNEL (Custom Domain) ---
         Console.WriteLine($"[INFO] Using identity: '{token.Alias}'");
+        Console.WriteLine($"[INFO] Account ID: {token.AccountId}");
 
         // Ensure binary exists first
         await _processManager.EnsureBinaryExistsAsync();
@@ -92,19 +93,89 @@ public class IllusionistService
         // Create tunnel
         var tunnelName = $"sarab-{Guid.NewGuid().ToString().Substring(0, 8)}";
         Console.WriteLine($"Creating tunnel: {tunnelName}...");
-        var tunnelId = await _adapter.CreateTunnelAsync(token, tunnelName);
+        var (tunnelId, createdToken) = await _adapter.CreateTunnelAsync(token, tunnelName);
 
-        // Fetch credentials
-        var tunnelToken = await _adapter.GetTunnelTokenAsync(token, tunnelId);
+        // Fetch credentials (with retry for propagation)
+        string? tunnelToken = createdToken;
+
+        if (string.IsNullOrEmpty(tunnelToken))
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                try
+                {
+                    // Give Cloudflare a moment to propagate
+                    await Task.Delay(1000 * (i + 1));
+                    tunnelToken = await _adapter.GetTunnelTokenAsync(token, tunnelId);
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (i == 2) throw; // Rethrow on last attempt
+                    Console.WriteLine($"[INFO] Waiting for tunnel token propagation... (Attempt {i + 1}/3)");
+                }
+            }
+        }
 
         // Create DNS record
         Console.WriteLine($"Pointing {hostname} -> {tunnelName}...");
-        var dnsRecordId = await _adapter.CreateDnsRecordAsync(token, zoneId, hostname, $"{tunnelId}.cfargotunnel.com");
+        string dnsRecordId;
+        try
+        {
+            dnsRecordId = await _adapter.CreateDnsRecordAsync(token, zoneId, hostname, $"{tunnelId}.cfargotunnel.com");
+        }
+        catch (Exception ex) when (ex.Message.Contains("81053") || ex.Message.Contains("already exists"))
+        {
+            Console.WriteLine($"[WARN] DNS record for '{hostname}' already exists. Updating...");
+            // Find existing record and update it (more efficient than delete+create)
+            try
+            {
+                var records = await _adapter.ListDnsRecordsAsync(token, zoneId, hostname);
+                if (records.Count > 0)
+                {
+                    // Update the first record, delete any duplicates
+                    var primaryRecord = records[0];
+                    Console.WriteLine($"[INFO] Updating record: {primaryRecord.Id} ({primaryRecord.Name})");
+                    dnsRecordId = await _adapter.UpdateDnsRecordAsync(token, zoneId, primaryRecord.Id, hostname, $"{tunnelId}.cfargotunnel.com");
+
+                    // Clean up any duplicate records (rare edge case)
+                    for (int i = 1; i < records.Count; i++)
+                    {
+                        Console.WriteLine($"[INFO] Removing duplicate record: {records[i].Id}");
+                        await _adapter.DeleteDnsRecordAsync(token, zoneId, records[i].Id);
+                    }
+                }
+                else
+                {
+                    // No records found despite conflict error - retry creation
+                    dnsRecordId = await _adapter.CreateDnsRecordAsync(token, zoneId, hostname, $"{tunnelId}.cfargotunnel.com");
+                }
+            }
+            catch (Exception innerEx)
+            {
+                throw new Exception($"Failed to update DNS record: {innerEx.Message}");
+            }
+        }
 
         var localUrl = $"{scheme}://{localHost}:{port}";
-        // Configure Ingress
-        Console.WriteLine($"Configuring ingress -> {localUrl}...");
-        await _adapter.ConfigureTunnelAsync(token, tunnelId, hostname, localUrl, noTlsVerify);
+
+        // Generate local config for cloudflared
+        var configContent = $@"
+tunnel: {tunnelId}
+credentials-file: /dev/null
+ingress:
+  - hostname: {hostname}
+    service: {localUrl}
+    originRequest:
+      noTLSVerify: {noTlsVerify.ToString().ToLower()}
+  - service: http_status:404
+";
+        var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), $".sarab/tunnels/{tunnelName}.yml");
+        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+        await File.WriteAllTextAsync(configPath, configContent);
+
+        Console.WriteLine($"Configuring ingress (local) -> {localUrl}...");
+        // API ConfigureTunnelAsync call removed in favor of local config
 
         try
         {
@@ -112,7 +183,7 @@ public class IllusionistService
             Console.WriteLine($"Mirage active at: https://{hostname}");
             Console.WriteLine("Press Ctrl+C to vanish.");
 
-            await _processManager.StartTunnelAsync(tunnelToken, localUrl);
+            await _processManager.StartTunnelAsync(tunnelToken, localUrl, configPath);
         }
         finally
         {
