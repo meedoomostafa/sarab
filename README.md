@@ -12,41 +12,43 @@ Sarab is a CLI tool designed to creates temporary public URLs for local services
 
 ## Installation
 
-### From Source
+### Quick Install (One-Liner)
 
-You can build and install Sarab directly from the source code.
-
-**Prerequisites:**
-*   .NET 10 SDK (Required only for building from source)
-*   Cloudflare Account (Required for API Tokens)
-
-**Installation Script:**
-
-The provided script will detect your operating system, build the project, and install the binary to your local path.
-
+**Linux / macOS:**
 ```bash
-# Download and run the script directly (Recommended)
 curl -sL https://raw.githubusercontent.com/meedoomostafa/sarab/main/install.sh | bash
 ```
 
-Alternatively, you can clone and run it manually:
-
-```bash
-chmod +x install.sh
-./install.sh
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/meedoomostafa/sarab/main/install.ps1 | iex
 ```
 
-This script will:
-1.  **Fetch the Source**: Clones the repository if you don't have it (or updates it if you do).
-2.  **Autodetect OS**: Builds for Linux, macOS, or Windows/WSL.
-3.  **Install Binary**: Places `sarab` in `~/.local/bin/`.
+> **Note:** Ensure `~/.local/bin` (Linux/macOS) or the install directory (Windows) is in your `PATH`.
 
-> **Note:** Ensure `~/.local/bin` is in your `PATH`.
-> Add `export PATH="$HOME/.local/bin:$PATH"` to your `.bashrc` or `.zshrc` if needed.
+### From Source
+
+If you prefer to build from source:
+
+**Prerequisites:**
+*   .NET 10 SDK
+*   Cloudflare Account (for API Tokens)
+
+**Linux:**
+```bash
+git clone https://github.com/meedoomostafa/sarab.git
+cd sarab
+chmod +x install.sh && ./install.sh
+```
+
+**Windows:**
+```powershell
+git clone https://github.com/meedoomostafa/sarab.git
+cd sarab
+.\install.ps1
+```
 
 ### Manual Build
-
-If you prefer to build manually:
 
 **Linux:**
 ```bash
@@ -63,25 +65,28 @@ dotnet publish Sarab.Cli/Sarab.Cli.csproj -r osx-x64 --self-contained true -o ./
 dotnet publish Sarab.Cli/Sarab.Cli.csproj -r win-x64 --self-contained true -o ./publish
 ```
 
-### Uninstallation
+---
 
-To remove the Sarab binary, run the uninstall script:
+## Uninstallation
 
+**Linux / macOS:**
 ```bash
-./uninstall.sh
+curl -sL https://raw.githubusercontent.com/meedoomostafa/sarab/main/uninstall.sh | bash
 ```
 
-If you installed via the one-liner and don't have the repository cloned, you can manually remove the binary:
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/meedoomostafa/sarab/main/uninstall.ps1 | iex
+```
 
+**Manual Removal:**
 ```bash
+# Linux/macOS
 rm ~/.local/bin/sarab
-```
+rm -rf ~/.sarab
 
-This will remove the `sarab` binary from `~/.local/bin`.
-To fully remove the source code, you can delete the repository folder:
-
-```bash
-rm -rf ~/myTools/Sarab
+# Windows (PowerShell)
+Remove-Item "$env:LOCALAPPDATA\sarab" -Recurse -Force
 ```
 
 ## Usage
