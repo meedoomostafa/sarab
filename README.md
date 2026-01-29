@@ -71,6 +71,12 @@ To remove the Sarab binary, run the uninstall script:
 ./uninstall.sh
 ```
 
+If you installed via the one-liner and don't have the repository cloned, you can manually remove the binary:
+
+```bash
+rm ~/.local/bin/sarab
+```
+
 This will remove the `sarab` binary from `~/.local/bin`.
 To fully remove the source code, you can delete the repository folder:
 
