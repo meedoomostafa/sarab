@@ -84,7 +84,7 @@ public class SqliteRepository : ITokenRepository
     public async Task<bool> RemoveAsync(string alias)
     {
         using var conn = GetConnection();
-        var affected = await conn.ExecuteAsync("UPDATE Tokens SET IsActive = 0 WHERE Alias = @Alias", new { Alias = alias });
+        var affected = await conn.ExecuteAsync("DELETE FROM Tokens WHERE Alias = @Alias", new { Alias = alias });
         return affected > 0;
     }
 
