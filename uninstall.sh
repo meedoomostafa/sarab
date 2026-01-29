@@ -20,5 +20,12 @@ else
 fi
 
 echo -e "${GREEN}Uninstallation of binary complete.${NC}"
-echo -e "${BLUE}To remove the repository and source code, run:${NC}"
-echo -e "${RED}rm -rf \"$(pwd)\"${NC}"
+
+# Also remove Sarab data directory
+if [ -d "$HOME/.sarab" ]; then
+    echo -e "${BLUE}Removing Sarab data directory at ~/.sarab...${NC}"
+    rm -rf "$HOME/.sarab"
+    echo -e "${GREEN}Data directory removed.${NC}"
+fi
+
+echo -e "${GREEN}Sarab has been completely uninstalled.${NC}"
