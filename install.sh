@@ -90,11 +90,28 @@ try_download_release() {
 }
 
 setup_path() {
-    # Add to PATH (Fish Support)
+    LOCAL_BIN="$HOME/.local/bin"
+    
+    # Add to Fish PATH if Fish is installed (regardless of current shell)
     if command -v fish &> /dev/null; then
-        if [[ "$SHELL" == *"fish"* ]]; then
-            echo -e "${BLUE}Fish shell detected. Adding to path...${NC}"
-            fish -c "fish_add_path -U ~/.local/bin"
+        echo -e "${BLUE}Fish shell detected. Configuring PATH...${NC}"
+        # Use fish_add_path for universal path (works across sessions)
+        fish -c "fish_add_path -U $LOCAL_BIN" 2>/dev/null || true
+        echo -e "${GREEN}✔ Fish PATH configured.${NC}"
+    fi
+    
+    # Also add to bash/zsh if their config exists
+    if [ -f "$HOME/.bashrc" ]; then
+        if ! grep -q "\.local/bin" "$HOME/.bashrc"; then
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+            echo -e "${GREEN}✔ Added to .bashrc${NC}"
+        fi
+    fi
+    
+    if [ -f "$HOME/.zshrc" ]; then
+        if ! grep -q "\.local/bin" "$HOME/.zshrc"; then
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+            echo -e "${GREEN}✔ Added to .zshrc${NC}"
         fi
     fi
 }
