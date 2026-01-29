@@ -9,6 +9,8 @@ jobs:
   build:
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       matrix:
         include:
@@ -16,14 +18,17 @@ jobs:
             rid: linux-x64
             name: sarab-linux-x64
             ext: ""
+            asset_extension: ".tar.gz"
           - os: macos-latest
             rid: osx-x64
             name: sarab-osx-x64
             ext: ""
+            asset_extension: ".tar.gz"
           - os: windows-latest
             rid: win-x64
             name: sarab-win-x64
             ext: ".exe"
+            asset_extension: ".zip"
 
     steps:
     - uses: actions/checkout@v3
@@ -53,6 +58,4 @@ jobs:
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: |
-          ${{ matrix.name }}.zip
-          ${{ matrix.name }}.tar.gz
+        files: ${{ matrix.name }}${{ matrix.asset_extension }}
