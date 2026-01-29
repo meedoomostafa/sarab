@@ -62,19 +62,26 @@ public class ProcessManager : IProcessManager
         await cmd.ExecuteAsync();
     }
 
-    public async Task StartQuickTunnelAsync(int port)
+    public async Task StartQuickTunnelAsync(int port, string localHost, string scheme, bool noTlsVerify)
     {
         var path = await GetBinaryPathAsync();
         var logHandler = CreateLogCleaner();
 
-        Console.WriteLine($"Starting Quick Tunnel (TryCloudflare) for port {port}...");
+        var url = $"{scheme}://{localHost}:{port}";
+        Console.WriteLine($"Starting Quick Tunnel (TryCloudflare) for {url}...");
 
         var cmd = Cli.Wrap(path)
-                     .WithArguments(args => args
-                         .Add("tunnel")
-                         .Add("--url")
-                         .Add($"http://localhost:{port}")
-                     )
+                     .WithArguments(args =>
+                     {
+                         args.Add("tunnel")
+                             .Add("--url")
+                             .Add(url);
+
+                         if (noTlsVerify)
+                         {
+                             args.Add("--no-tls-verify");
+                         }
+                     })
                      .WithStandardOutputPipe(PipeTarget.ToDelegate(logHandler))
                      .WithStandardErrorPipe(PipeTarget.ToDelegate(logHandler));
 

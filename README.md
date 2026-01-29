@@ -113,14 +113,22 @@ sarab expose <port> [options]
 **Options:**
 *   `--subdomain <name>`: Request a specific subdomain (Authenticated mode only).
 *   `--identity <alias>`: Use a specific token alias.
-*   `--local-host <url>`: Check/Forward traffic to a specific local host (default is `localhost`).
+*   `--local-host <url>`: Override the local host address (e.g., `127.0.0.1`, `[::1]`). Useful if `localhost` resolution is ambiguous.
+*   `--scheme <protocol>`: Specify the local protocol (`http` or `https`). Default is `http`.
+*   `--no-tls-verify`: Disable TLS verification for local HTTPS services (useful for self-signed certificates).
 
 **Examples:**
 ```bash
-# Expose port 3000 with a random subdomain
+# Expose port 3000 (standard)
 sarab expose 3000
 
-# Expose port 5000 as 'api-v1.yourdomain.com' using the 'work' identity
+# Expose a local HTTPS service with self-signed certs
+sarab expose 8000 --scheme https --no-tls-verify
+
+# Force IPv4 binding if 'localhost' defaults to IPv6
+sarab expose 5280 --local-host 127.0.0.1
+
+# Authenticated mode: Expose port 5000 as 'api-v1.yourdomain.com'
 sarab expose 5000 --subdomain api-v1 --identity work
 ```
 

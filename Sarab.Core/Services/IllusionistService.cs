@@ -20,7 +20,7 @@ public class IllusionistService
         _adapter = adapter;
     }
 
-    public async Task ExposePortAsync(int port, string? subdomain = null)
+    public async Task ExposePortAsync(int port, string? subdomain = null, string localHost = "localhost", string scheme = "http", bool noTlsVerify = false)
     {
         // 1. Ensure binary exists first
         await _processManager.EnsureBinaryExistsAsync();
@@ -39,7 +39,7 @@ public class IllusionistService
                 Console.WriteLine("[WARN] --subdomain is ignored in Quick Tunnel mode. Add a token to use custom domains.");
             }
 
-            await _processManager.StartQuickTunnelAsync(port);
+            await _processManager.StartQuickTunnelAsync(port, localHost, scheme, noTlsVerify);
             return;
         }
 
@@ -84,10 +84,10 @@ public class IllusionistService
         Console.WriteLine($"Pointing {hostname} -> {tunnelName}...");
         var dnsRecordId = await _adapter.CreateDnsRecordAsync(token, zoneId, hostname, $"{tunnelId}.cfargotunnel.com");
 
-        var localUrl = $"http://localhost:{port}";
+        var localUrl = $"{scheme}://{localHost}:{port}";
         // Configure Ingress
         Console.WriteLine($"Configuring ingress -> {localUrl}...");
-        await _adapter.ConfigureTunnelAsync(token, tunnelId, hostname, localUrl);
+        await _adapter.ConfigureTunnelAsync(token, tunnelId, hostname, localUrl, noTlsVerify);
 
         try
         {

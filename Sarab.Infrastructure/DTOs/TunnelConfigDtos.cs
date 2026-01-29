@@ -22,6 +22,15 @@ public class TunnelIngressRule
 
     [JsonPropertyName("service")]
     public string Service { get; set; } = "http_status:404";
+
+    [JsonPropertyName("originRequest")]
+    public TunnelOriginRequest? OriginRequest { get; set; }
+}
+
+public class TunnelOriginRequest
+{
+    [JsonPropertyName("noTLSVerify")]
+    public bool? NoTLSVerify { get; set; }
 }
 
 public class TunnelConfigResponse
