@@ -24,6 +24,11 @@ curl -sL https://raw.githubusercontent.com/meedoomostafa/sarab/main/install.sh |
 irm https://raw.githubusercontent.com/meedoomostafa/sarab/main/install.ps1 | iex
 ```
 
+**Mobile (Termux / iSH / a-Shell):**
+```bash
+curl -sL https://raw.githubusercontent.com/meedoomostafa/sarab/main/mobile-install.sh | bash
+```
+
 > **Note:** Ensure `~/.local/bin` (Linux/macOS) or the install directory (Windows) is in your `PATH`.
 
 ### From Source
