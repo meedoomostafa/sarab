@@ -43,8 +43,9 @@ public class ArtifactStore : IArtifactStore
         {
             Architecture.X64 => "amd64",
             Architecture.Arm64 => "arm64",
+            Architecture.Arm => "arm",
             Architecture.X86 => "386",
-            _ => throw new PlatformNotSupportedException("Architecture not supported")
+            _ => throw new PlatformNotSupportedException($"Architecture {RuntimeInformation.ProcessArchitecture} not supported")
         };
 
         var url = ($"{BaseUrl}-{arch}");
