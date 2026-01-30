@@ -82,6 +82,76 @@ function Try-DownloadRelease {
 
 # -------------------- Main Logic --------------------
 
+function Check-UpToDate {
+    if (-not (Get-Command "sarab" -ErrorAction SilentlyContinue)) {
+        return $false # Not installed
+    }
+
+    Write-Color "Checking for updates..." Cyan
+    
+    try {
+        $LatestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/meedoomostafa/sarab/releases/latest" -ErrorAction Stop
+        $LatestTag = $LatestRelease.tag_name
+        $ReleaseId = $LatestRelease.id
+        
+        if ([string]::IsNullOrWhiteSpace($LatestTag) -or [string]::IsNullOrWhiteSpace($ReleaseId)) {
+            return $false
+        }
+
+        # Strip 'v' prefix
+        $CleanTag = $LatestTag -replace '^v',''
+        
+        # Get local version
+        $LocalVersion = sarab --version
+        
+        # Check Local Release ID
+        $IdFile = Join-Path $env:USERPROFILE ".sarab\release.id"
+        $LocalId = ""
+        if (Test-Path $IdFile) {
+            $LocalId = Get-Content $IdFile
+        }
+        
+        if ("$ReleaseId" -eq "$LocalId" -and $LocalVersion -eq $CleanTag) {
+            Write-Color "Sarab is already up to date ($LocalVersion)." Green
+            
+            $Response = Read-Host "Do you want to reinstall? [y/N]"
+            if ($Response -match "^[yY]$") {
+                 Write-Color "Reinstalling..." Cyan
+                 return $false # Proceed to install
+            }
+
+            return $true # Stop
+        }
+        
+        if ("$ReleaseId" -ne "$LocalId" -and $LocalVersion -eq $CleanTag) {
+             Write-Color "New build detected for version $CleanTag (Release ID: $ReleaseId). Updating..." Cyan
+             return $false
+        }
+        
+        Write-Color "New version available: $CleanTag (Current: $LocalVersion)" Cyan
+        return $false
+    }
+    catch {
+        # Network error or API limit, proceed with install/build
+        return $false
+    }
+}
+
+function Save-ReleaseId {
+    try {
+        $LatestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/meedoomostafa/sarab/releases/latest" -ErrorAction Stop
+        $ReleaseId = $LatestRelease.id
+        $IdDir = Join-Path $env:USERPROFILE ".sarab"
+        if (-not (Test-Path $IdDir)) { New-Item -ItemType Directory -Path $IdDir -Force | Out-Null }
+        Set-Content -Path (Join-Path $IdDir "release.id") -Value $ReleaseId -Force
+    } catch {}
+}
+
+# Check if up to date implies we should skip everything
+if (Check-UpToDate) {
+    exit 0
+}
+
 # Try to download release
 if (Try-DownloadRelease) {
     Setup-Path
@@ -90,6 +160,7 @@ if (Try-DownloadRelease) {
     & (Join-Path $DestDir "sarab.exe") init
 
     Write-Color "Installation Complete (from Release)." Green
+    Save-ReleaseId
     Write-Color "Run 'sarab --version' to verify."
     exit 0
 }

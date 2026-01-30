@@ -118,6 +118,95 @@ setup_path() {
 
 # --- Main Logic ---
 
+check_is_up_to_date() {
+    # Check if forced
+    if [[ "$1" == "--force" ]]; then
+        return 1
+    fi
+
+    if ! command -v sarab &> /dev/null; then
+        return 1 # Not installed
+    fi
+
+    echo -e "${BLUE}Checking for updates...${NC}"
+
+    if ! command -v curl &> /dev/null; then
+        return 1 # Cannot check
+    fi
+    
+    # Get latest tag and ID from GitHub
+    LATEST_JSON=$(curl -s "https://api.github.com/repos/meedoomostafa/sarab/releases/latest")
+    
+    # Extract tag_name
+    LATEST_TAG=$(echo "$LATEST_JSON" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    # Extract Release ID (top level id)
+    RELEASE_ID=$(echo "$LATEST_JSON" | grep '"id":' | head -n 1 | sed -E 's/.*: ([0-9]+),.*/\1/')
+
+    if [ -z "$LATEST_TAG" ] || [ -z "$RELEASE_ID" ]; then
+        # Failed to fetch, proceed with install
+        return 1
+    fi
+
+    # Strip 'v' prefix if present
+    CLEAN_TAG=${LATEST_TAG#v}
+
+    # Get local version
+    LOCAL_VERSION=$(sarab --version 2>/dev/null)
+    
+    # Check Local Release ID
+    ID_FILE="$HOME/.sarab/release.id"
+    LOCAL_ID=""
+    if [ -f "$ID_FILE" ]; then
+        LOCAL_ID=$(cat "$ID_FILE")
+    fi
+
+    # Logic:
+    # 1. If RELEASE_ID != LOCAL_ID -> New build (even if version string is same)
+    # 2. If LOCAL_VERSION != CLEAN_TAG -> New version string
+
+    if [ "$RELEASE_ID" == "$LOCAL_ID" ] && [ "$LOCAL_VERSION" == "$CLEAN_TAG" ]; then
+        echo -e "${GREEN}Sarab is already up to date ($LOCAL_VERSION).${NC}"
+        
+        # Interactive Prompt for reinstall
+        read -p "Do you want to reinstall? [y/N] " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+             echo -e "${BLUE}Reinstalling...${NC}"
+             return 1 # Proceed to install
+        fi
+        
+        return 0 # Exit
+    fi
+    
+    if [ "$RELEASE_ID" != "$LOCAL_ID" ] && [ "$LOCAL_VERSION" == "$CLEAN_TAG" ]; then
+         echo -e "${BLUE}New build detected for version $CLEAN_TAG (Release ID: $RELEASE_ID). Updating...${NC}"
+         return 1
+    fi
+    
+    echo -e "${BLUE}New version available: $CLEAN_TAG (Current: ${LOCAL_VERSION:-None})${NC}"
+    return 1
+}
+
+save_release_id() {
+     # Fetch ID again to be sure (or reuse global if we exported it, but simple curl is safer to be self-contained in success path)
+     # Actually, we can just fetch it again quickly or rely on the fact we are installing "latest"
+     # Let's fetch it again to be safe and simple, or pass it. 
+     # Better: just fetch latest ID again after successful install to ensure we have the ID of what we just installed.
+     
+     LATEST_JSON=$(curl -s "https://api.github.com/repos/meedoomostafa/sarab/releases/latest")
+     RELEASE_ID=$(echo "$LATEST_JSON" | grep '"id":' | head -n 1 | sed -E 's/.*: ([0-9]+),.*/\1/')
+     
+     if [ ! -z "$RELEASE_ID" ]; then
+        mkdir -p "$HOME/.sarab"
+        echo "$RELEASE_ID" > "$HOME/.sarab/release.id"
+     fi
+}
+
+# Check version (pass arguments if any)
+if check_is_up_to_date "$@"; then
+    exit 0
+fi
+
 # 1. Try to download release
 if try_download_release; then
     setup_path
@@ -127,6 +216,7 @@ if try_download_release; then
     "$BINARY_DEST" init
     
     echo -e "${GREEN}Installation Complete (from Release).${NC}"
+    save_release_id
     echo -e "Run 'sarab --version' to verify."
     exit 0
 fi
