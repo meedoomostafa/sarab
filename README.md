@@ -158,7 +158,26 @@ sarab expose 5280 --local-host 127.0.0.1
 sarab expose 5000 --subdomain api-v1 --identity work
 ```
 
-### 4. Maintenance
+### 4. SSH Tunneling
+Sarab allows you to SSH into machines without a public IP using Cloudflare Tunnels.
+
+**Host Machine (The one being accessed):**
+Expose port 22 with the `ssh` scheme.
+```bash
+sarab expose 22 --scheme ssh
+# Output: Copied to clipboard: ssh://user@random-name.trycloudflare.com
+```
+
+**Client Machine (The one connecting):**
+Use the `connect` command. This handles the proxying automatically.
+```bash
+sarab connect user@random-name.trycloudflare.com
+```
+*   `--identity-file (-i)`: Specify a private key file if needed.
+
+> **Note:** SSH support works in any shell (Bash, Zsh, Fish, PowerShell) as it wraps the native SSH client.
+
+### 5. Maintenance
 
 **List Active Tunnels:**
 Displays a list of active tunnels created by Sarab across all configured identities.
