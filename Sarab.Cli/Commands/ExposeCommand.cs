@@ -16,7 +16,7 @@ public class ExposeCommand : Command
         _service = service;
         var portArg = new Argument<int>("port", "The local port to expose");
         var subdomainOption = new Option<string?>("--subdomain", "Request a specific subdomain");
-        var localhostOption = new Option<string>("--local-host", () => "localhost", "Check/Forward traffic to a specific local host");
+        var localhostOption = new Option<string>("--local-host", () => "127.0.0.1", "Check/Forward traffic to a specific local host");
         var schemeOption = new Option<TunnelScheme>("--scheme", () => TunnelScheme.HTTP, "Protocol scheme (http or https)");
         var noTlsVerifyOption = new Option<bool>("--no-tls-verify", "Disable TLS verification for local HTTPS service");
         var identityOption = new Option<string?>("--identity", "Use a specific identity (token alias)");
@@ -34,6 +34,12 @@ public class ExposeCommand : Command
     private async Task ExecuteAsync(int port, string? subdomain, string localHost, TunnelScheme scheme, bool noTlsVerify, string? identity)
     {
         AnsiConsole.MarkupLine($"[bold yellow]Exposing port {port}...[/]");
+
+        if (scheme == TunnelScheme.SSH)
+        {
+            AnsiConsole.MarkupLine("[dim]Note: Ensure your local SSH server is running (e.g. systemctl status sshd)[/]");
+        }
+
         if (!string.IsNullOrEmpty(subdomain))
         {
             AnsiConsole.MarkupLine($"Requesting subdomain: [blue]{subdomain}[/]");
