@@ -73,7 +73,6 @@ public class ProcessManager : IProcessManager
     public async Task StartQuickTunnelAsync(int port, string localHost, TunnelScheme scheme, bool noTlsVerify)
     {
         var path = await GetBinaryPathAsync();
-        var logHandler = CreateLogCleaner();
 
         var protocol = scheme switch
         {
@@ -84,7 +83,11 @@ public class ProcessManager : IProcessManager
             _ => throw new ArgumentOutOfRangeException(nameof(scheme), scheme, null)
         };
         var url = $"{protocol}://{localHost}:{port}";
-        Console.WriteLine($"Starting Quick Tunnel (TryCloudflare) for {url}...");
+
+        // Use specialized handler for SSH, regular handler for HTTP
+        var logHandler = scheme == TunnelScheme.SSH
+            ? CreateSshLogHandler()
+            : CreateLogCleaner();
 
         var cmd = Cli.Wrap(path)
                      .WithArguments(args =>
@@ -132,6 +135,34 @@ public class ProcessManager : IProcessManager
             }
 
             Console.WriteLine(cleanLine);
+        };
+    }
+
+    private Action<string> CreateSshLogHandler()
+    {
+        var urlDisplayed = false;
+        var username = Environment.UserName;
+
+        return line =>
+        {
+            if (urlDisplayed) return;
+
+            var match = System.Text.RegularExpressions.Regex.Match(line, @"https://([a-z0-9\-]+\.trycloudflare\.com)");
+            if (match.Success)
+            {
+                var domain = match.Groups[1].Value;
+                var sshTarget = $"{username}@{domain}";
+
+                Console.WriteLine();
+                Console.WriteLine($"  SSH Target: {sshTarget}");
+                Console.WriteLine();
+                Console.WriteLine($"  Connect:    sarab connect {sshTarget}");
+                Console.WriteLine();
+                Console.WriteLine("  Press Ctrl+C to stop the tunnel.");
+                Console.WriteLine();
+
+                urlDisplayed = true;
+            }
         };
     }
 

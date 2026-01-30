@@ -24,8 +24,14 @@ public class ConnectCommand : Command
 
         this.SetHandler(async (target, keyPath) =>
         {
+            Console.WriteLine($"Connecting to {target}...");
+            Console.WriteLine();
+
             var (exe, args) = await _connectorService.PrepareSshCommandAsync(target, keyPath);
             await _processManager.StartInteractiveShellAsync(exe, args);
+
+            Console.WriteLine();
+            Console.WriteLine("Connection closed.");
         }, targetArg, keyOption);
     }
 }

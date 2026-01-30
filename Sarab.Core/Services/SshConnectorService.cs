@@ -18,7 +18,7 @@ public class SshConnectorService
         // ProxyCommand
         var proxyCmd = $"{binPath} access ssh --hostname %h";
 
-        var args = $"-o \"ProxyCommand={proxyCmd}\" {target}";
+        var args = $"-o \"ProxyCommand={proxyCmd}\" -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR {target}";
 
         if (!string.IsNullOrEmpty(identityFile))
         {
