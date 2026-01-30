@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Threading.Tasks;
 using Spectre.Console;
+using Sarab.Core.Entities;
 using Sarab.Core.Services;
 
 namespace Sarab.Cli.Commands;

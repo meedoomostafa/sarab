@@ -157,7 +157,7 @@ public class IllusionistService
             }
         }
 
-        var localUrl = $"{scheme}://{localHost}:{port}";
+        var localUrl = $"{scheme.ToString().ToLower()}://{localHost}:{port}";
 
         // Generate local config for cloudflared
         var configContent = $@"

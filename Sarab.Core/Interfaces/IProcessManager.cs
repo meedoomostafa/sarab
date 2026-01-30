@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Sarab.Core.Entities;
 
 namespace Sarab.Core.Interfaces;
 

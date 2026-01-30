@@ -16,9 +16,9 @@ public class SshConnectorService
         var binPath = await _artifactStore.EnsureCloudflaredBinaryAsync();
 
         // ProxyCommand
-        var proxyCmd = $"\\\"{binPath}\\\" access ssh --hostname %h";
+        var proxyCmd = $"{binPath} access ssh --hostname %h";
 
-        var args = $"-o ProxyCommand=\"{proxyCmd}\" {target}";
+        var args = $"-o \"ProxyCommand={proxyCmd}\" {target}";
 
         if (!string.IsNullOrEmpty(identityFile))
         {
