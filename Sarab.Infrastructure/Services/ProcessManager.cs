@@ -69,12 +69,20 @@ public class ProcessManager : IProcessManager
         await cmd.ExecuteAsync();
     }
 
-    public async Task StartQuickTunnelAsync(int port, string localHost, string scheme, bool noTlsVerify)
+    public async Task StartQuickTunnelAsync(int port, string localHost, TunnelScheme scheme, bool noTlsVerify)
     {
         var path = await GetBinaryPathAsync();
         var logHandler = CreateLogCleaner();
 
-        var url = $"{scheme}://{localHost}:{port}";
+        var protocol = scheme switch
+        {
+            TunnelScheme.HTTP => "http",
+            TunnelScheme.HTTPS => "https",
+            TunnelScheme.SSH => "ssh",
+            TunnelScheme.RDP => "rdp",
+            _ => throw new ArgumentOutOfRangeException(nameof(scheme), scheme, null)
+        };
+        var url = $"{protocol}://{localHost}:{port}";
         Console.WriteLine($"Starting Quick Tunnel (TryCloudflare) for {url}...");
 
         var cmd = Cli.Wrap(path)

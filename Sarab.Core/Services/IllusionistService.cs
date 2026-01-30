@@ -21,7 +21,7 @@ public class IllusionistService
         _adapter = adapter;
     }
 
-    public async Task ExposePortAsync(int port, string? subdomain = null, string localHost = "localhost", string scheme = "http", bool noTlsVerify = false, string? identity = null)
+    public async Task ExposePortAsync(int port, string? subdomain = null, string localHost = "localhost", TunnelScheme scheme = TunnelScheme.HTTP, bool noTlsVerify = false, string? identity = null)
     {
         // Try to get a token
         Token? token = null;

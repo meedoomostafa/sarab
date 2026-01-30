@@ -6,6 +6,6 @@ public interface IProcessManager
 {
     Task EnsureBinaryExistsAsync();
     Task StartTunnelAsync(string tunnelToken, string url, string? configPath = null);
-    Task StartQuickTunnelAsync(int port, string localHost, string scheme, bool noTlsVerify);
+    Task StartQuickTunnelAsync(int port, string localHost, TunnelScheme scheme, bool noTlsVerify);
     Task StopAllTunnelsAsync();
 }
