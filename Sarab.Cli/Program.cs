@@ -46,6 +46,11 @@ class Program
             serviceProvider.GetRequiredService<IllusionistService>()
         ));
 
+        rootCommand.AddCommand(new ConnectCommand(
+            serviceProvider.GetRequiredService<SshConnectorService>(),
+            serviceProvider.GetRequiredService<IProcessManager>()
+        ));
+
         return await rootCommand.InvokeAsync(args);
     }
 
@@ -59,6 +64,7 @@ class Program
         // Register Core
         services.AddSingleton<TokenRotator>();
         services.AddSingleton<IllusionistService>();
+        services.AddSingleton<SshConnectorService>();
 
         // Register Infrastructure
         services.AddSingleton<ITokenRepository>(new SqliteRepository(dbPath));
