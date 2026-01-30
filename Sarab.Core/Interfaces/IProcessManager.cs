@@ -7,5 +7,6 @@ public interface IProcessManager
     Task EnsureBinaryExistsAsync();
     Task StartTunnelAsync(string tunnelToken, string url, string? configPath = null);
     Task StartQuickTunnelAsync(int port, string localHost, TunnelScheme scheme, bool noTlsVerify);
+    Task StartInteractiveShellAsync(string fileName, string arguments);
     Task StopAllTunnelsAsync();
 }

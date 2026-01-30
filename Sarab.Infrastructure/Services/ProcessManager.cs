@@ -134,6 +134,25 @@ public class ProcessManager : IProcessManager
         };
     }
 
+    public async Task StartInteractiveShellAsync(string fileName, string arguments)
+    {
+        var processStartInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            RedirectStandardInput = false,  // Interactive: User input goes directly to process
+            RedirectStandardOutput = false, // Interactive: Process output goes directly to console
+            RedirectStandardError = false,
+            UseShellExecute = false
+        };
+
+        using var process = System.Diagnostics.Process.Start(processStartInfo);
+        if (process != null)
+        {
+            await process.WaitForExitAsync();
+        }
+    }
+
     public Task StopAllTunnelsAsync()
     {
         return Task.CompletedTask;
