@@ -29,11 +29,7 @@ jobs:
             name: sarab-linux-arm
             ext: ""
             asset_extension: ".tar.gz"
-          - os: ubuntu-latest
-            rid: linux-x86
-            name: sarab-linux-x86
-            ext: ""
-            asset_extension: ".tar.gz"
+
           - os: macos-latest
             rid: osx-x64
             name: sarab-osx-x64
