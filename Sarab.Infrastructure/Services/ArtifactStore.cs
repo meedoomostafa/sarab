@@ -10,7 +10,7 @@ namespace Sarab.Infrastructure.Services;
 public class ArtifactStore : IArtifactStore
 {
     private readonly HttpClient _http;
-    private const string BaseUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux";
+    private const string BaseUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download";
 
     public ArtifactStore(HttpClient http)
     {
@@ -21,7 +21,8 @@ public class ArtifactStore : IArtifactStore
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var binDir = Path.Combine(home, ".sarab", "bin");
-        var binPath = Path.Combine(binDir, "cloudflared");
+        var binName = GetBinaryName();
+        var binPath = Path.Combine(binDir, binName);
 
         if (File.Exists(binPath))
         {
@@ -37,8 +38,18 @@ public class ArtifactStore : IArtifactStore
         return binPath;
     }
 
-    private async Task DownloadBinaryAsync(string path)
+    private static string GetBinaryName()
     {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return "cloudflared.exe";
+        }
+        return "cloudflared";
+    }
+
+    private static string BuildDownloadUrl()
+    {
+        var os = GetOsIdentifier();
         var arch = RuntimeInformation.ProcessArchitecture switch
         {
             Architecture.X64 => "amd64",
@@ -48,7 +59,25 @@ public class ArtifactStore : IArtifactStore
             _ => throw new PlatformNotSupportedException($"Architecture {RuntimeInformation.ProcessArchitecture} not supported")
         };
 
-        var url = ($"{BaseUrl}-{arch}");
+        var extension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "";
+        return $"{BaseUrl}/cloudflared-{os}-{arch}{extension}";
+    }
+
+    private static string GetOsIdentifier()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return "windows";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            return "darwin";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return "linux";
+
+        throw new PlatformNotSupportedException($"OS platform not supported");
+    }
+
+    private async Task DownloadBinaryAsync(string path)
+    {
+        var url = BuildDownloadUrl();
 
         using var stream = await _http.GetStreamAsync(url);
         using var file = new FileStream(path, FileMode.Create);
