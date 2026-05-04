@@ -84,10 +84,13 @@ public class ProcessManager : IProcessManager
         };
         var url = $"{protocol}://{localHost}:{port}";
 
-        // Use specialized handler for SSH, regular handler for HTTP
-        var logHandler = scheme == TunnelScheme.SSH
-            ? CreateSshLogHandler()
-            : CreateLogCleaner();
+        // Use specialized handler based on scheme
+        var logHandler = scheme switch
+        {
+            TunnelScheme.SSH => CreateSshLogHandler(),
+            TunnelScheme.RDP => CreateRdpLogHandler(port),
+            _ => CreateLogCleaner()
+        };
 
         var cmd = Cli.Wrap(path)
                      .WithArguments(args =>
@@ -157,6 +160,32 @@ public class ProcessManager : IProcessManager
                 Console.WriteLine($"  SSH Target: {sshTarget}");
                 Console.WriteLine();
                 Console.WriteLine($"  Connect:    sarab connect {sshTarget}");
+                Console.WriteLine();
+                Console.WriteLine("  Press Ctrl+C to stop the tunnel.");
+                Console.WriteLine();
+
+                urlDisplayed = true;
+            }
+        };
+    }
+
+    private Action<string> CreateRdpLogHandler(int port)
+    {
+        var urlDisplayed = false;
+
+        return line =>
+        {
+            if (urlDisplayed) return;
+
+            var match = System.Text.RegularExpressions.Regex.Match(line, @"https://([a-z0-9\-]+\.trycloudflare\.com)");
+            if (match.Success)
+            {
+                var domain = match.Groups[1].Value;
+
+                Console.WriteLine();
+                Console.WriteLine($"  RDP Tunnel: {domain}");
+                Console.WriteLine();
+                Console.WriteLine($"  Connect:    sarab rdp-connect {domain}");
                 Console.WriteLine();
                 Console.WriteLine("  Press Ctrl+C to stop the tunnel.");
                 Console.WriteLine();

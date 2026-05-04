@@ -182,7 +182,36 @@ sarab connect user@random-name.trycloudflare.com
 
 > **Note:** SSH support works in any shell (Bash, Zsh, Fish, PowerShell) as it wraps the native SSH client.
 
-### 5. Maintenance
+### 5. RDP Tunneling
+Sarab allows you to connect to remote desktops (RDP) without a public IP using Cloudflare Tunnels.
+
+**Host Machine (The one being accessed):**
+Expose port 3389 with the `rdp` scheme.
+```bash
+sarab expose 3389 --scheme rdp
+# Output: Connect: sarab rdp-connect random-name.trycloudflare.com
+```
+
+**Client Machine (The one connecting):**
+Use the `rdp-connect` command. This starts a local TCP proxy through the tunnel.
+```bash
+sarab rdp-connect random-name.trycloudflare.com
+```
+*   `--port`: Local proxy port (default: `13389`).
+
+Then connect your RDP client to `localhost:13389`:
+```bash
+# Linux
+xfreerdp /v:localhost:13389 /u:USERNAME
+
+# macOS
+open rdp://localhost:13389
+
+# Windows
+mstsc /v:localhost:13389
+```
+
+### 6. Maintenance
 
 **List Active Tunnels:**
 Displays a list of active tunnels created by Sarab across all configured identities.

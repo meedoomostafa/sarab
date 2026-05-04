@@ -51,6 +51,11 @@ class Program
             serviceProvider.GetRequiredService<IProcessManager>()
         ));
 
+        rootCommand.AddCommand(new RdpConnectCommand(
+            serviceProvider.GetRequiredService<RdpConnectorService>(),
+            serviceProvider.GetRequiredService<IProcessManager>()
+        ));
+
         return await rootCommand.InvokeAsync(args);
     }
 
@@ -65,10 +70,12 @@ class Program
         services.AddSingleton<TokenRotator>();
         services.AddSingleton<IllusionistService>();
         services.AddSingleton<SshConnectorService>();
+        services.AddSingleton<RdpConnectorService>();
 
         // Register Infrastructure
         services.AddSingleton<ITokenRepository>(new SqliteRepository(dbPath));
         services.AddSingleton<IProcessManager, ProcessManager>();
+        services.AddSingleton<IPlatformEnvironment, PlatformEnvironment>();
 
         services.AddRefitClient<ICloudflareApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://api.cloudflare.com/client/v4"));

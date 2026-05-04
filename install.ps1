@@ -6,13 +6,17 @@ Installs Sarab CLI on Windows.
 This script attempts to download the latest release of Sarab.
 If a release is not found, it falls back to building from source (requires .NET SDK).
 It also adds the installation directory to the user's PATH.
+
+.NOTE
+This script is designed to work correctly when invoked via Invoke-Expression (iex),
+e.g. irm https://.../install.ps1 | iex. When run this way, all build operations
+use a temporary directory instead of the current working directory.
 #>
 
 $ErrorActionPreference = "Stop"
 
 # Configuration
 $RepoUrl = "https://github.com/meedoomostafa/sarab.git"
-$InstallDir = Join-Path $PWD "Sarab"
 $DestDir = Join-Path $env:USERPROFILE ".local\bin"
 $BinaryName = "Sarab.Cli.exe"
 $AssetPattern = "sarab-win-x64.zip"
@@ -27,6 +31,21 @@ function Write-Color {
     param([string]$Message, [ConsoleColor]$Color)
     Write-Host $Message -ForegroundColor $Color
 }
+
+# Detect iex mode: when invoked via Invoke-Expression, $MyInvocation.MyCommand.Path is null
+$IsIexMode = [string]::IsNullOrEmpty($MyInvocation.MyCommand.Path)
+
+# In iex mode, we use a temp directory for all build/clone operations.
+# Otherwise, we use $PWD for the install source directory.
+if ($IsIexMode) {
+    $SourceWorkDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $SourceWorkDir -Force | Out-Null
+    Write-Color "Running in iex mode. Using temp directory: $SourceWorkDir" Cyan
+} else {
+    $SourceWorkDir = $PWD.Path
+}
+
+$InstallDir = Join-Path $SourceWorkDir "Sarab"
 
 function Setup-Path {
     $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
@@ -64,7 +83,7 @@ function Try-DownloadRelease {
         }
 
         Write-Color "Installing to $DestDir..." Cyan
-        $TargetBin = Join-Path $DestDir "sarab.exe" 
+        $TargetBin = Join-Path $DestDir "sarab.exe"
         Copy-Item -Path $SourceBin.FullName -Destination $TargetBin -Force
 
         return $true
@@ -80,40 +99,38 @@ function Try-DownloadRelease {
     }
 }
 
-# -------------------- Main Logic --------------------
-
 function Check-UpToDate {
     if (-not (Get-Command "sarab" -ErrorAction SilentlyContinue)) {
         return $false # Not installed
     }
 
     Write-Color "Checking for updates..." Cyan
-    
+
     try {
         $LatestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/meedoomostafa/sarab/releases/latest" -ErrorAction Stop
         $LatestTag = $LatestRelease.tag_name
         $ReleaseId = $LatestRelease.id
-        
+
         if ([string]::IsNullOrWhiteSpace($LatestTag) -or [string]::IsNullOrWhiteSpace($ReleaseId)) {
             return $false
         }
 
         # Strip 'v' prefix
         $CleanTag = $LatestTag -replace '^v',''
-        
+
         # Get local version
         $LocalVersion = sarab --version
-        
+
         # Check Local Release ID
         $IdFile = Join-Path $env:USERPROFILE ".sarab\release.id"
         $LocalId = ""
         if (Test-Path $IdFile) {
             $LocalId = Get-Content $IdFile
         }
-        
+
         if ("$ReleaseId" -eq "$LocalId" -and $LocalVersion -eq $CleanTag) {
             Write-Color "Sarab is already up to date ($LocalVersion)." Green
-            
+
             $Response = Read-Host "Do you want to reinstall? [y/N]"
             if ($Response -match "^[yY]$") {
                  Write-Color "Reinstalling..." Cyan
@@ -122,12 +139,12 @@ function Check-UpToDate {
 
             return $true # Stop
         }
-        
+
         if ("$ReleaseId" -ne "$LocalId" -and $LocalVersion -eq $CleanTag) {
              Write-Color "New build detected for version $CleanTag (Release ID: $ReleaseId). Updating..." Cyan
              return $false
         }
-        
+
         Write-Color "New version available: $CleanTag (Current: $LocalVersion)" Cyan
         return $false
     }
@@ -145,6 +162,12 @@ function Save-ReleaseId {
         if (-not (Test-Path $IdDir)) { New-Item -ItemType Directory -Path $IdDir -Force | Out-Null }
         Set-Content -Path (Join-Path $IdDir "release.id") -Value $ReleaseId -Force
     } catch {}
+}
+
+function Cleanup-IfIex {
+    if ($IsIexMode -and (Test-Path $SourceWorkDir)) {
+        Remove-Item -Path $SourceWorkDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 # Check if up to date implies we should skip everything
@@ -175,44 +198,48 @@ if (-not (Get-Command "dotnet" -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-# Prepare Source
-if (Test-Path "Sarab.sln") {
-    Write-Color "Running inside repository." Cyan
+# Determine repo root: either current directory (if Sarab.sln exists) or clone into work dir
+$RepoRoot = $null
+if (Test-Path (Join-Path $SourceWorkDir "Sarab.sln")) {
+    $RepoRoot = $SourceWorkDir
+    Write-Color "Running inside repository at $RepoRoot." Cyan
 } else {
-    if (Test-Path $InstallDir) {
-        Write-Color "Updating existing repository in $InstallDir..." Cyan
-        Push-Location $InstallDir
+    $Candidate = Join-Path $SourceWorkDir "Sarab"
+    if (Test-Path (Join-Path $Candidate "Sarab.sln")) {
+        $RepoRoot = $Candidate
+        Write-Color "Updating existing repository in $RepoRoot..." Cyan
+        Push-Location $RepoRoot
         git pull
         Pop-Location
     } else {
-        Write-Color "Cloning Sarab from $RepoUrl..." Cyan
-        git clone $RepoUrl $InstallDir
-    }
-    
-    # Check if we need to enter the directory (if we just cloned or updated)
-    if ($PWD.Path -ne $InstallDir) {
-       Push-Location $InstallDir
+        Write-Color "Cloning Sarab from $RepoUrl into $Candidate..." Cyan
+        git clone $RepoUrl $Candidate
+        if (-not (Test-Path (Join-Path $Candidate "Sarab.sln"))) {
+            Write-Color "Clone failed or repository is invalid." Red
+            Cleanup-IfIex
+            exit 1
+        }
+        $RepoRoot = $Candidate
     }
 }
 
-# We might be in the root of the repo (where Sarab.sln is) or outside.
-# If we were outside, we pushed location to $InstallDir.
-
 Write-Color "Building Sarab for win-x64..." Cyan
+$DistDir = Join-Path $RepoRoot "dist"
 $PublishArgs = @(
-    "publish", 
-    "Sarab.Cli/Sarab.Cli.csproj", 
-    "-c", "Release", 
-    "-r", "win-x64", 
-    "--self-contained", "true", 
-    "-p:PublishSingleFile=true", 
-    "-o", "./dist"
+    "publish",
+    (Join-Path $RepoRoot "Sarab.Cli/Sarab.Cli.csproj"),
+    "-c", "Release",
+    "-r", "win-x64",
+    "--self-contained", "true",
+    "-p:PublishSingleFile=true",
+    "-o", $DistDir
 )
 dotnet @PublishArgs
 
-$BuildBin = Join-Path "dist" $BinaryName
+$BuildBin = Join-Path $DistDir $BinaryName
 if (-not (Test-Path $BuildBin)) {
      Write-Color "Build failed. Binary not found at $BuildBin" Red
+     Cleanup-IfIex
      exit 1
 }
 
@@ -227,3 +254,5 @@ Write-Color "Initializing database..." Cyan
 
 Write-Color "Installation Complete (from Source)." Green
 Write-Color "Run 'sarab --version' to verify."
+
+Cleanup-IfIex
