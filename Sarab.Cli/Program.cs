@@ -75,6 +75,7 @@ class Program
         // Register Infrastructure
         services.AddSingleton<ITokenRepository>(new SqliteRepository(dbPath));
         services.AddSingleton<IProcessManager, ProcessManager>();
+        services.AddSingleton<IPlatformEnvironment, PlatformEnvironment>();
 
         services.AddRefitClient<ICloudflareApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://api.cloudflare.com/client/v4"));

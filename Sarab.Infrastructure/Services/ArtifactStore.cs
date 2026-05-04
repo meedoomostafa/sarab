@@ -10,11 +10,13 @@ namespace Sarab.Infrastructure.Services;
 public class ArtifactStore : IArtifactStore
 {
     private readonly HttpClient _http;
+    private readonly IPlatformEnvironment _platform;
     private const string BaseUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download";
 
-    public ArtifactStore(HttpClient http)
+    public ArtifactStore(HttpClient http, IPlatformEnvironment platform)
     {
         _http = http;
+        _platform = platform;
     }
 
     public async Task<string> EnsureCloudflaredBinaryAsync()
@@ -38,38 +40,38 @@ public class ArtifactStore : IArtifactStore
         return binPath;
     }
 
-    private static string GetBinaryName()
+    private string GetBinaryName()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (_platform.IsWindows())
         {
             return "cloudflared.exe";
         }
         return "cloudflared";
     }
 
-    private static string BuildDownloadUrl()
+    internal string BuildDownloadUrl()
     {
         var os = GetOsIdentifier();
-        var arch = RuntimeInformation.ProcessArchitecture switch
+        var arch = _platform.ProcessArchitecture switch
         {
             Architecture.X64 => "amd64",
             Architecture.Arm64 => "arm64",
             Architecture.Arm => "arm",
             Architecture.X86 => "386",
-            _ => throw new PlatformNotSupportedException($"Architecture {RuntimeInformation.ProcessArchitecture} not supported")
+            _ => throw new PlatformNotSupportedException($"Architecture {_platform.ProcessArchitecture} not supported")
         };
 
-        var extension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "";
+        var extension = _platform.IsWindows() ? ".exe" : "";
         return $"{BaseUrl}/cloudflared-{os}-{arch}{extension}";
     }
 
-    private static string GetOsIdentifier()
+    private string GetOsIdentifier()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (_platform.IsWindows())
             return "windows";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        if (_platform.IsMacOS())
             return "darwin";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (_platform.IsLinux())
             return "linux";
 
         throw new PlatformNotSupportedException($"OS platform not supported");
@@ -86,7 +88,7 @@ public class ArtifactStore : IArtifactStore
 
     private void MakeExecutable(string path)
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        if (!_platform.IsLinux() && !_platform.IsMacOS())
             return;
 
         // Grant execute permissions for owner, group, and others
