@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  devdiag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: DevDiag scan
+        uses: meedoomostafa/devdiag@v0.4.0
+        with:
+          ci: 'true'
+          save-report: 'true'
+          fail-severity: high
